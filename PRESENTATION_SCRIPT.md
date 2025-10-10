@@ -172,8 +172,8 @@ This document provides talking points and presenter notes for delivering the pre
 **"Proper indexing is crucial for performance:"**
 ```javascript
 // Show on slide or code
-db.patients.createIndex({ "personal_info.national_id": 1 })
-db.consultations.createIndex({ "patient_id": 1, "date": -1 })
+db.patients.createIndex({ "personal_info.national_id": 1 }, { unique: true })
+db.consultations.createIndex({ "patient_id": 1, "consultation_date": -1 })
 ```
 *"These indexes ensure our emergency queries return in milliseconds"*
 
