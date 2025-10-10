@@ -210,7 +210,7 @@ Key indexes for performance optimization:
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/I42I/DBManagementProject.git
+   git clone https://github.com/YOUR_ORG/DBManagementProject.git
    cd DBManagementProject
    ```
 
@@ -242,7 +242,7 @@ Key indexes for performance optimization:
 
 1. **Clone and install dependencies**
    ```bash
-   git clone https://github.com/I42I/DBManagementProject.git
+   git clone https://github.com/YOUR_ORG/DBManagementProject.git
    cd DBManagementProject
    npm install
    ```
@@ -286,7 +286,7 @@ NODE_ENV=production
 
 # SMS/USSD Integration
 SMS_API_KEY=your_sms_api_key
-SMS_PROVIDER=twilio
+SMS_PROVIDER=africastalking  # Or use 'twilio' for alternative provider
 
 # Security
 JWT_SECRET=your_jwt_secret_key
@@ -369,6 +369,7 @@ curl -H "Authorization: Bearer YOUR_TOKEN" http://localhost:3000/api/v1/patients
 
 **Create a new patient**
 ```bash
+# Note: Phone numbers use +237 (Cameroon) as an example - adapt to your region
 curl -X POST http://localhost:3000/api/v1/patients \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_TOKEN" \
@@ -385,7 +386,7 @@ curl -X POST http://localhost:3000/api/v1/patients \
       "country": "Cameroon"
     },
     "medicalHistory": {
-      "allergies": ["penicillin"],
+      "allergies": ["penicillin", "aspirin"],
       "chronicConditions": ["diabetes", "hypertension"],
       "bloodType": "A+"
     }
