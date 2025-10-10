@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historique Patient - Plateforme Médicale</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏥 Plateforme de Digitalisation des Services Médicaux</h1>
+            <p>Centralisation des informations médicales pour améliorer la qualité des soins</p>
+        </header>
+
+        <nav>
+            <ul>
+                <li><a href="index.html">Accueil</a></li>
+                <li><a href="patients.html">Liste des Patients</a></li>
+                <li><a href="consultations.html">Consultations</a></li>
+                <li><a href="patient-history.html">Historique Patient</a></li>
+            </ul>
+        </nav>
+
+        <main>
+            <h2>Historique Médical du Patient</h2>
+            
+            <div class="search-section">
+                <label for="patient-select" style="font-weight: bold; margin-right: 10px;">Sélectionner un patient:</label>
+                <select id="patient-select">
+                    <!-- Populated by JavaScript -->
+                </select>
+            </div>
+
+            <div id="patient-info" class="patient-info">
+                <!-- Populated by JavaScript -->
+            </div>
+
+            <div id="history-timeline" class="history-timeline">
+                <!-- Populated by JavaScript -->
+            </div>
+
+            <div style="margin-top: 30px; padding: 20px; background: #f8d7da; border-radius: 10px; border-left: 5px solid #dc3545;">
+                <h3>🚨 Importance de l'Historique Médical</h3>
+                <p style="line-height: 1.8; color: #721c24;">
+                    L'historique médical complet du patient est essentiel pour éviter des erreurs médicales graves. 
+                    Il permet aux professionnels de santé de:
+                </p>
+                <ul style="line-height: 2; color: #721c24; margin-top: 10px;">
+                    <li>Identifier les allergies et contre-indications médicamenteuses</li>
+                    <li>Suivre l'évolution des maladies chroniques (diabète, hypertension, etc.)</li>
+                    <li>Éviter les interactions médicamenteuses dangereuses</li>
+                    <li>Adapter les traitements en fonction de l'état de santé global</li>
+                    <li>Prévenir des erreurs comme l'injection de glucose à un diabétique</li>
+                </ul>
+            </div>
+
+            <div style="margin-top: 20px; padding: 20px; background: #d4edda; border-radius: 10px; border-left: 5px solid #28a745;">
+                <h3>✅ Recommandations</h3>
+                <ul style="line-height: 2; color: #155724;">
+                    <li>Toujours consulter l'historique avant toute prescription</li>
+                    <li>Mettre à jour l'historique après chaque consultation</li>
+                    <li>Vérifier les allergies avant l'administration de médicaments</li>
+                    <li>Coordonner avec d'autres spécialistes si nécessaire</li>
+                    <li>Informer le patient de son historique et de ses risques</li>
+                </ul>
+            </div>
+        </main>
+
+        <footer>
+            <p>&copy; 2025 Plateforme de Digitalisation des Services Médicaux - Projet NoSQL Mini</p>
+        </footer>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
