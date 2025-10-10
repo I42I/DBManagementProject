@@ -265,6 +265,11 @@ function renderPatientHistory() {
     const patientId = parseInt(params.get('id')) || 1;
     
     const patient = patients.find(p => p.id === patientId);
+    if (!patient) {
+        // If patient not found, redirect to first patient
+        window.location.href = 'patient-history.html?id=1';
+        return;
+    }
     const history = patientHistory[patientId] || [];
 
     // Render patient info
@@ -328,7 +333,7 @@ function renderPatientHistory() {
 
     // Update patient selector
     const patientSelect = document.getElementById('patient-select');
-    if (patientSelect) {
+    if (patientSelect && patientSelect.options.length === 0) {
         patients.forEach(p => {
             const option = document.createElement('option');
             option.value = p.id;
@@ -338,6 +343,9 @@ function renderPatientHistory() {
             }
             patientSelect.appendChild(option);
         });
+    } else if (patientSelect) {
+        // Just update the selected option if already populated
+        patientSelect.value = patientId;
     }
 }
 

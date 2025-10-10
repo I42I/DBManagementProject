@@ -94,3 +94,13 @@ Pour ajouter de vraies données depuis une API backend:
 - Conçu pour le contexte africain (références Mobile Money, etc.)
 - Priorisation de la simplicité et de la clarté
 - Pas de framework JavaScript lourd pour faciliter le déploiement
+
+## Sécurité
+
+⚠️ **Note importante**: Cette implémentation est un prototype/démo avec des données statiques. Pour une utilisation en production:
+- Sanitiser toutes les entrées utilisateur pour prévenir les attaques XSS
+- Implémenter une authentification et autorisation appropriées
+- Utiliser HTTPS pour toutes les communications
+- Valider et échapper les données côté serveur
+- Implémenter une protection CSRF
+- Gérer les données médicales conformément aux réglementations (RGPD, HIPAA, etc.)
