@@ -6,9 +6,14 @@ This project proposes a digital platform to centralize patients' medical informa
 
 ## 📚 Documentation
 
+**New to this project? Start with [Quick Start Guide](QUICK_START.md)** 👈
+
+### Core Documentation
 - **[Presentation](PRESENTATION.md)** - Comprehensive project presentation with detailed slides
 - **[System Architecture](ARCHITECTURE.md)** - Technical architecture documentation
 - **[Database Schema](DATABASE_SCHEMA.md)** - Complete NoSQL database design and schema
+- **[Visual Diagrams](DIAGRAMS.md)** - System diagrams, data flows, and user journeys
+- **[Presentation Script](PRESENTATION_SCRIPT.md)** - Speaker notes and Q&A preparation
 
 ## Entities
 
