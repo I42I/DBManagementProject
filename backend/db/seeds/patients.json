@@ -1,0 +1,19 @@
+[
+  {
+    "facility_id": { "$oid": "64f000000000000000000001" },
+    "identite": {
+      "prenom": "Amina",
+      "nom": "Abakar",
+      "date_naissance": { "$date": "1995-03-12T00:00:00Z" },
+      "sexe": "F",
+      "national_id": "TD-19950312-001"
+    },
+    "contacts": { "phone": "+23566000001", "adresse": "N'Djamena" },
+    "allergies": ["penicilline"],
+    "maladies_chroniques": ["diabete"],
+    "deleted": false,
+    "created_at": { "$date": "2025-10-13T09:00:00Z" },
+    "updated_at": { "$date": "2025-10-13T09:00:00Z" }
+  }
+]
+

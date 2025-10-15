@@ -1,0 +1,38 @@
+{
+  "bsonType": "object",
+  "required": ["patient_id", "doctor_id", "facility_id", "status", "created_at"],
+  "properties": {
+    "patient_id":  { "bsonType": "objectId" },
+    "doctor_id":   { "bsonType": "objectId" },
+    "appointment_id": { "bsonType": "objectId" },
+    "facility_id": { "bsonType": "objectId" },
+
+    "status": { "enum": ["ordered", "in_progress", "completed", "cancelled"] },
+    "date_ordered":  { "bsonType": "date" },
+    "date_reported": { "bsonType": "date" },
+
+    "tests": {
+      "bsonType": "array",
+      "minItems": 1,
+      "items": {
+        "bsonType": "object",
+        "required": ["code", "name", "status"],
+        "properties": {
+          "code":   { "bsonType": "string" },
+          "name":   { "bsonType": "string" },
+          "status": { "enum": ["ordered", "in_progress", "completed", "cancelled"] },
+          "result": { "bsonType": "string" },
+          "unit":   { "bsonType": "string" },
+          "ref_range": { "bsonType": "string" },
+          "abnormal": { "bsonType": "bool" }
+        }
+      }
+    },
+
+    "notes": { "bsonType": "string" },
+
+    "created_at": { "bsonType": "date" },
+    "updated_at": { "bsonType": "date" },
+    "deleted":    { "bsonType": "bool" }
+  }
+}

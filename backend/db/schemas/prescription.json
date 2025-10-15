@@ -1,0 +1,32 @@
+{
+  "bsonType": "object",
+  "required": ["patient_id", "doctor_id", "consultation_id", "created_at"],
+  "properties": {
+    "patient_id":      { "bsonType": "objectId" },
+    "doctor_id":       { "bsonType": "objectId" },
+    "consultation_id": { "bsonType": "objectId" },
+
+    "items": {
+      "bsonType": "array",
+      "minItems": 1,
+      "items": {
+        "bsonType": "object",
+        "required": ["dci", "posologie"],
+        "properties": {
+          "dci":        { "bsonType": "string" },
+          "forme":      { "bsonType": "string" },
+          "posologie":  { "bsonType": "string" },
+          "duree_j":    { "bsonType": ["int","double","decimal"] },
+          "contre_indications": { "bsonType": "array", "items": { "bsonType": "string" } }
+        }
+      }
+    },
+
+    "renouvellements": { "bsonType": ["int","double","decimal"] },
+    "notes":           { "bsonType": "string" },
+
+    "created_at": { "bsonType": "date" },
+    "updated_at": { "bsonType": "date" },
+    "deleted":    { "bsonType": "bool" }
+  }
+}

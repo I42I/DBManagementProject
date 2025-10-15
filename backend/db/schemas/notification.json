@@ -1,0 +1,24 @@
+{
+  "bsonType": "object",
+  "required": ["channel", "status", "created_at"],
+  "properties": {
+    "to_patient_id": { "bsonType": "objectId" },
+    "to_doctor_id":  { "bsonType": "objectId" },
+    "channel": { "enum": ["sms","email","push"] },
+    "status":  { "enum": ["queued","sent","failed","read"] },
+
+    "template": { "bsonType": "string" },
+    "payload":  { "bsonType": "object" },
+
+    "ref_type": { "enum": ["appointment","consultation","prescription","payment","other"] },
+    "ref_id":   { "bsonType": "objectId" },
+
+    "send_at":  { "bsonType": "date" },
+    "sent_at":  { "bsonType": "date" },
+    "error":    { "bsonType": "string" },
+
+    "created_at": { "bsonType": "date" },
+    "updated_at": { "bsonType": "date" },
+    "deleted":    { "bsonType": "bool" }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "bsonType": "object",
+  "required": ["facility_id", "report_type", "period_start", "period_end", "status", "created_at"],
+  "properties": {
+    "facility_id": { "bsonType": "objectId" },
+    "report_type": { "enum": ["case_summary","disease_reporting","inventory","other"] },
+    "period_start": { "bsonType": "date" },
+    "period_end":   { "bsonType": "date" },
+
+    "status": { "enum": ["draft","submitted","accepted","rejected"] },
+    "submitted_at": { "bsonType": "date" },
+    "external_ref": { "bsonType": "string" },
+
+    "payload": { "bsonType": "object" },
+    "notes":   { "bsonType": "string" },
+
+    "created_at": { "bsonType": "date" },
+    "updated_at": { "bsonType": "date" },
+    "deleted":    { "bsonType": "bool" }
+  }
+}
