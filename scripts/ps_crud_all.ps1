@@ -3,14 +3,53 @@ param([string]$Base="http://127.0.0.1:5000")
 # --------------------------------------------------------------------------
 # Helpers (avec -ErrorAction Stop pour fail-fast)
 # --------------------------------------------------------------------------
+# --- Helpers robustes ---
 function Ok($cond, $msg) {
-  if (-not $cond) { Write-Host "❌ $msg" -f Red; exit 1 }
-  else { Write-Host "✅ $msg" -f Green }
+  if (-not $cond) { Write-Host "❌ $msg" -ForegroundColor Red; exit 1 }
+  else { Write-Host "✅ $msg" -ForegroundColor Green }
 }
-function IRMGET($url)          { Invoke-RestMethod $url -ErrorAction Stop }
-function IRMPOST($url, $body)  { Invoke-RestMethod $url -Method POST  -ContentType "application/json" -Body ($body | ConvertTo-Json -Depth 8) -ErrorAction Stop }
-function IRMPATCH($url, $body) { Invoke-RestMethod $url -Method PATCH -ContentType "application/json" -Body ($body | ConvertTo-Json -Depth 8) -ErrorAction Stop }
-function IRMDELETE($url)       { Invoke-RestMethod $url -Method DELETE -ErrorAction Stop }
+
+function Show-HttpError($label, $err) {
+  Write-Host "❌ $label" -ForegroundColor Red
+  Write-Error $err.Exception.Message
+  if ($err.Exception.Response) {
+    try {
+      $r = New-Object IO.StreamReader ($err.Exception.Response.GetResponseStream())
+      Write-Error ("Response body: " + $r.ReadToEnd())
+    } catch {}
+  }
+  exit 1
+}
+
+function IRMGET($url) {
+  try   { Invoke-RestMethod -Uri $url -Method GET -ErrorAction Stop }
+  catch { Show-HttpError "GET $url" $_ }
+}
+
+function IRMPOST($url, $body) {
+  try {
+    $json = $body | ConvertTo-Json -Depth 8
+    Invoke-RestMethod -Uri $url -Method POST -ContentType "application/json" -Body $json -ErrorAction Stop
+  } catch { Show-HttpError "POST $url" $_ }
+}
+
+function IRMPATCH($url, $body) {
+  try {
+    $json = $body | ConvertTo-Json -Depth 8
+    Invoke-RestMethod -Uri $url -Method PATCH -ContentType "application/json" -Body $json -ErrorAction Stop
+  } catch { Show-HttpError "PATCH $url" $_ }
+}
+
+function IRMDELETE($url) {
+  try   { Invoke-RestMethod -Uri $url -Method DELETE -ErrorAction Stop }
+  catch { Show-HttpError "DELETE $url" $_ }
+}
+
+# Utilitaire pour “faire une étape” avec message OK automatique
+function Step($label, [scriptblock]$action) {
+  $global:LASTRESULT = & $action
+  Write-Host "✅ $label" -ForegroundColor Green
+}
 
 Write-Host "=== CRUD full smoke on $Base ===" -f Cyan
 
@@ -141,31 +180,37 @@ Ok ($prup.matched -eq 1) "Prescription patch OK"
 # --------------------------------------------------------------------------
 # PHARMACIES
 # --------------------------------------------------------------------------
-$Ph1 = IRMPOST "$Base/api/pharmacies" @{
-  patient_id = $P1_id
-  doctor_id  = $D1_id
-  prescription_id = $Pres1_id
-  status = "requested"
-  items = @(
-    @{ dci="Paracetamol"; qty=6; posologie="500mg x3/j" }
-  )
+# après avoir obtenu $pId (patient) et $dId (doctor)
+# --- CREATE ---
+$ph = @{
+  patient_id = $P1_id        # <--- bon ID patient
+  doctor_id  = $D1_id        # <--- bon ID docteur
+  status     = "requested"
+  items      = @(@{ dci = "paracetamol"; qty = 1 })
 }
+$Ph1 = IRMPOST "$Base/api/pharmacies" $ph
 Ok ($Ph1._id) "Pharmacy created"
 $Ph1_id = $Ph1._id
 
+# --- GET BY ID ---
 $ph1 = IRMGET "$Base/api/pharmacies/$Ph1_id"
 Ok ($ph1._id -eq $Ph1_id) "Pharmacy get by id OK"
 
+# --- LIST ---
 $phl = IRMGET "$Base/api/pharmacies"
 Ok ($phl.Count -ge 1) "Pharmacies list OK"
 
-$phup = IRMPATCH "$Base/api/pharmacies/$Ph1_id" @{ status="dispensed" }
+# --- PATCH (dispense) ---
+# (ton backend mettra dispensed_at automatiquement si absent — c’est ok)
+$phup = IRMPATCH "$Base/api/pharmacies/$Ph1_id" @{ status = "dispensed" }
 Ok ($phup.matched -eq 1) "Pharmacy patch OK"
 
 # --------------------------------------------------------------------------
 # LABORATORIES
 # --------------------------------------------------------------------------
 $Lab1 = IRMPOST "$Base/api/laboratories" @{
+  # `name` is required by the collection validator; include it to avoid WriteError 121
+  name = "Lab order for $P1_id"
   patient_id = $P1_id
   doctor_id  = $D1_id
   status = "ordered"
@@ -198,8 +243,8 @@ $Pay1 = IRMPOST "$Base/api/payments" @{
   status = "pending"
   method = "cash"
   items = @(
-    @{ label="Consultation"; price=30.00 },
-    @{ label="Analyses NFS"; price=15.50 }
+    @{ label="Consultation"; amount=30.00 },
+    @{ label="Analyses NFS"; amount=15.50 }
   )
 }
 Ok ($Pay1._id) "Payment created"

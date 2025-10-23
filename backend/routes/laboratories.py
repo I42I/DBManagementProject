@@ -44,6 +44,13 @@ def create():
         except InvalidId:
             return {"error":"appointment_id must be ObjectId"}, 400
 
+    # persist provided name (collection validator requires 'name')
+    if b.get("name"):
+        doc["name"] = b.get("name")
+    else:
+        # fallback: generate a short descriptive name
+        doc["name"] = f"Lab order for {str(pid)}"
+
     for t in b.get("tests", []):
         if not isinstance(t, dict): continue
         if not (t.get("code") and t.get("name") and t.get("status")): continue

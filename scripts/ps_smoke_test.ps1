@@ -175,3 +175,4 @@ $out | ConvertTo-Json -Depth 10 | Out-File -FilePath "scripts\last_smoke_results
 $failed = $results | Where-Object { -not $_.OK }
 if ($failed.Count -gt 0) { exit 2 } else { exit 0 }
 
+

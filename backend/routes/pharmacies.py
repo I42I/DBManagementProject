@@ -7,11 +7,18 @@ bp = Blueprint("pharmacies", __name__)
 
 def _validate(b):
     for f in ["patient_id","doctor_id","items","status"]:
-        if f not in b: return f"{f} is required"
+        if f not in b:
+            return f"{f} is required"
+    if b["status"] not in {"requested","prepared","dispensed","cancelled"}:
+        return "status invalid"
     if not isinstance(b["items"], list) or not b["items"]:
         return "items must be non-empty array"
+    for it in b["items"]:
+        if not isinstance(it, dict) or "dci" not in it:
+            return "each item must include dci"
+        if "qty" not in it and "quantity" not in it:
+            return "each item must include qty"
     return None
-
 @bp.post("")
 def create():
     b = request.get_json(force=True) or {}
