@@ -1,22 +1,98 @@
-# Python
-__pycache__/
-*.py[cod]
-*.pyo
+
+# --- Environnements virtuels ---
 .venv/
 venv/
 env/
+ENV/
 
-# Logs
+# --- Fichiers compilés Python ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*$py.class
+
+# --- Fichiers de log & cache ---
 *.log
-logs/
+*.tmp
+*.bak
+*.swp
+*.swo
+*.sqlite3
+.cache/
+pytest_cache/
+celerybeat-schedule
 backend/logs/
 backend/backend_run.log
 
-# IDE/OS
+# --- Configuration locale ---
+instance/
+.env
+.env.*
+*.env
+*.ini
+config.local.*
+settings.local.*
+
+# --- Outils de test ou de debug ---
+coverage.xml
+nosetests.xml
+.pytest_cache/
+.tox/
+htmlcov/
+.coverage*
+.cache/
+.mypy_cache/
+.dmypy.json
+.pyre/
+.pytype/
+
+# --- Dossiers IDE / éditeurs ---
 .vscode/
 .idea/
+*.sublime-workspace
+*.sublime-project
+
+# --- Systèmes d'exploitation ---
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# Brouillons
+# --- Docker / Compose ---
+*.pid
+*.seed
+docker-compose.override.yml
+docker-compose.dev.yml
+
+# --- PowerShell scripts / logs temporaires ---
+*.ps1~
+*.ps1.save
+*.bak.ps1
+*.log.ps1
+*.psm1~
+*.psd1~
+scripts/last_smoke_results.json
+
+# --- Jupyter / Notebook ---
+.ipynb_checkpoints/
+
+# --- Fichiers de build ou distribution ---
+build/
+dist/
+*.egg-info/
+.eggs/
+MANIFEST
+
+# --- Documentation / drafts ---
 brouillon.md
+notes.txt
+notes/
+temp/
+tmp/
+
+# --- Bases de données locales ---
+db/*.json
+db/*.csv
+db/*.dump
+*.db
+*.sqlite
