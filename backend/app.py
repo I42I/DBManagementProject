@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, request, g
 from flask.json.provider import DefaultJSONProvider
 from flask_cors import CORS
-from pymongo import MongoClient, ASCENDING
+from pymongo import MongoClient
 from bson import ObjectId
 from datetime import datetime, date, timezone
 from logging.handlers import RotatingFileHandler
@@ -17,26 +17,40 @@ class MongoJSON(DefaultJSONProvider):
         if isinstance(o, ObjectId):
             return str(o)
         if isinstance(o, (datetime, date)):
+            # force ISO8601 en Z (UTC)
             if isinstance(o, datetime) and o.tzinfo is None:
                 o = o.replace(tzinfo=timezone.utc)
-            return o.isoformat().replace('+00:00', 'Z')
+            return o.isoformat().replace("+00:00", "Z")
         return super().default(o)
 
 app.json = MongoJSON(app)
 
-# CORS (ouvre tout par défaut ; restreins si besoin)
-CORS(app)
+# CORS (par défaut permissif ; ajuste si besoin avec origins=[...])
+CORS(app)  # CORS(app, resources={r"/api/*": {"origins": "*"}})
+
+READ_ONLY = os.getenv("READ_ONLY", "1").lower() in ("1", "true", "yes")
+
+@app.before_request
+def _enforce_read_only():
+    # laissons passer health/ready
+    if request.path in ("/health", "/api/health", "/ready"):
+        return
+    if READ_ONLY and request.method not in ("GET", "HEAD", "OPTIONS"):
+        return jsonify({"error": "read_only_mode", "message": "Writes are disabled"}), 405
 
 # -----------------------------
-# Logs avec rotation (ASCII only in messages)
+# Logs avec rotation
 # -----------------------------
 os.makedirs("logs", exist_ok=True)
 handler = RotatingFileHandler("logs/backend_run.log", maxBytes=5_000_000, backupCount=5)
 handler.setLevel(logging.INFO)
 fmt = logging.Formatter("[%(asctime)s] %(levelname)s in %(module)s: %(message)s")
 handler.setFormatter(fmt)
-app.logger.setLevel(logging.INFO)
-app.logger.addHandler(handler)
+
+# Evite d'empiler des handlers si le reloader Flask relance le process
+if not app.logger.handlers:
+    app.logger.setLevel(logging.INFO)
+    app.logger.addHandler(handler)
 
 @app.before_request
 def _request_id():
@@ -54,69 +68,50 @@ def _after(resp):
 # -----------------------------
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
 DB_NAME   = os.getenv("MONGO_DB", "hospital")
-client = MongoClient(MONGO_URI)
+
+# petits timeouts pour fail fast si Mongo est down
+client = MongoClient(
+    MONGO_URI,
+    serverSelectionTimeoutMS=5000,
+    connectTimeoutMS=5000,
+    socketTimeoutMS=10000,
+)
 app.db = client[DB_NAME]
 
 # -----------------------------
-# Swagger (UI: /apidocs)
+# Index & Seed (léger)
 # -----------------------------
-
-
-# -----------------------------
-# Index & Seed (via seed.py)
-# -----------------------------
-def _ensure_indexes_local(db):
-    # Index partiels (uniques seulement si la valeur est de type string)
-    db.patients.create_index(
-        [("email", ASCENDING)],
-        name="uniq_email_not_null",
-        unique=True,
-        partialFilterExpression={"email": {"$type": "string"}}
-    )
-    db.doctors.create_index(
-        [("license_number", ASCENDING)],
-        name="uniq_license_not_null",
-        unique=True,
-        partialFilterExpression={"license_number": {"$type": "string"}}
-    )
-    db.appointments.create_index(
-        [("patient_id", ASCENDING), ("start_at", ASCENDING)],
-        name="uniq_patient_start",
-        unique=True
-    )
-    db.notifications.create_index(
-        "expires_at",
-        name="ttl_expires_at",
-        expireAfterSeconds=0
-    )
-    app.logger.info("[seed] ensure_indexes (local) OK")
+def ensure_minimal_indexes(db):
+    try:
+        db.notifications.create_index(
+            "expires_at",
+            name="ttl_expires_at",
+            expireAfterSeconds=0
+        )
+        app.logger.info("[indexes] TTL notifications OK")
+    except Exception as e:
+        app.logger.warning(f"[indexes] TTL notifications skipped: {e}")
 
 def bootstrap_indexes_and_seed():
+    ensure_minimal_indexes(app.db)
     try:
-        import seed  # seed.py dans le même dossier
-        if hasattr(seed, "ensure_indexes"):
-            seed.ensure_indexes(app.db)
-            app.logger.info("[seed] ensure_indexes (seed.py) OK")
-        else:
-            _ensure_indexes_local(app.db)
-
         if os.getenv("SEED_ON_START", "false").lower() in ("1", "true", "yes"):
+            import seed  # seed.py
             if hasattr(seed, "load_seed"):
                 seed.load_seed(app.db)
-                app.logger.info("[seed] load_seed (seed.py) OK")
+                app.logger.info("[seed] load_seed OK")
             elif hasattr(seed, "main"):
                 try:
                     seed.main(app.db)
                 except TypeError:
                     seed.main()
-                app.logger.info("[seed] main (seed.py) OK")
+                app.logger.info("[seed] main OK")
         else:
-            app.logger.info("[seed] SEED_ON_START=false -> no seed.")
+            app.logger.info("[seed] SEED_ON_START=false -> pas de seed.")
     except ModuleNotFoundError:
-        app.logger.info("[seed] seed.py not found -> using local indexes.")
-        _ensure_indexes_local(app.db)
+        app.logger.info("[seed] seed.py absent -> aucun seed.")
     except Exception as e:
-        app.logger.exception(f"[seed] bootstrap error: {e}")
+        app.logger.exception(f"[seed] erreur de bootstrap: {e}")
 
 # Appelé à l’import (dès le démarrage du process)
 bootstrap_indexes_and_seed()
@@ -151,6 +146,10 @@ def not_found(e):
 @app.errorhandler(400)
 def bad_request(e):
     return jsonify({"error": "Bad Request", "details": str(e)}), 400
+
+@app.errorhandler(405)
+def method_not_allowed(e):
+    return jsonify({"error": "Method Not Allowed"}), 405
 
 @app.errorhandler(422)
 def unprocessable(e):
@@ -191,4 +190,5 @@ app.register_blueprint(ha_bp,              url_prefix="/api/health_authorities")
 # -----------------------------
 if __name__ == "__main__":
     _debug = os.getenv("FLASK_DEBUG", "0").lower() in ("1", "true", "yes")
+    # use_reloader=_debug : pratique en dev. En prod, laisse False.
     app.run(host="0.0.0.0", port=5000, debug=_debug, use_reloader=_debug)

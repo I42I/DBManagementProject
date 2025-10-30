@@ -1,20 +1,42 @@
 from flask import Blueprint, request, current_app
 from bson import ObjectId
 from bson.errors import InvalidId
+from pymongo.errors import WriteError
 from datetime import datetime
 
 bp = Blueprint("doctors", __name__)
 
-def _validate(b):
-    if "identite" not in b: return "identite is required"
-    if "specialites" not in b or not isinstance(b["specialites"], list) or not b["specialites"]:
-        return "specialites (non-empty array) is required"
+def _validate_create(b: dict):
+    if "identite" not in b:
+        return "identite requis"
+    ident = b["identite"]
+    for f in ("prenom", "nom"):
+        if f not in ident:
+            return f"identite.{f} requis"
+        if not isinstance(ident[f], str) or not ident[f].strip():
+            return f"identite.{f} doit être une chaîne non vide"
+
+    sp = b.get("specialites")
+    if not isinstance(sp, list) or len(sp) == 0:
+        return "specialites doit être un tableau non vide"
+    if not all(isinstance(x, str) and x.strip() for x in sp):
+        return "specialites doit contenir des chaînes non vides"
     return None
 
 @bp.get("")
 def list_():
-    cur = current_app.db.doctors.find({"deleted": {"$ne": True}},
-                                      {"identite": 1, "specialites": 1}).limit(200)
+    q = {"deleted": {"$ne": True}}
+    # (optionnel) filtres simples
+    spec = request.args.get("specialite")
+    if spec:
+        q["specialites"] = spec
+    if "facility_id" in request.args:
+        try:
+            q["facility_id"] = ObjectId(request.args["facility_id"])
+        except InvalidId:
+            return {"error": "facility_id invalide"}, 400
+
+    cur = current_app.db.doctors.find(q, {"identite": 1, "specialites": 1}).limit(200)
     return [d for d in cur], 200
 
 @bp.get("/<id>")
@@ -22,47 +44,38 @@ def get_one(id):
     try:
         oid = ObjectId(id)
     except InvalidId:
-        return {"error": "invalid id"}, 400
+        return {"error": "id invalide"}, 400
     d = current_app.db.doctors.find_one({"_id": oid})
-    return (d, 200) if d else ({"error": "not found"}, 404)
+    return (d, 200) if d else ({"error": "introuvable"}, 404)
 
 @bp.post("")
 def create():
     b = request.get_json(force=True) or {}
-    err = _validate(b)
-    if err: return {"error": err}, 400
-    # If facility_id is provided but null, treat as not provided
-    if "facility_id" in b and (b.get("facility_id") is not None and b.get("facility_id") != ""):
+    err = _validate_create(b)
+    if err:
+        return {"error": err}, 400
+
+    # facility_id requis par le schéma → générer si absent
+    if b.get("facility_id"):
         try:
-            b["facility_id"] = ObjectId(b["facility_id"]) if not isinstance(b["facility_id"], ObjectId) else b["facility_id"]
-        except Exception:
-            return {"error": "facility_id must be a valid ObjectId if provided"}, 400
+            b["facility_id"] = ObjectId(b["facility_id"])
+        except InvalidId:
+            return {"error": "facility_id doit être un ObjectId"}, 400
     else:
         b["facility_id"] = ObjectId()
+
+    # normaliser strings
+    b["identite"]["prenom"] = b["identite"]["prenom"].strip()
+    b["identite"]["nom"] = b["identite"]["nom"].strip()
+    b["specialites"] = [s.strip() for s in b["specialites"]]
+
     b.setdefault("created_at", datetime.utcnow())
     b.setdefault("updated_at", datetime.utcnow())
     b.setdefault("deleted", False)
-    ins = current_app.db.doctors.insert_one(b)
+
+    try:
+        ins = current_app.db.doctors.insert_one(b)
+    except WriteError as we:
+        return {"error": "validation_mongo", "details": getattr(we, "details", {}) or {}}, 400
+
     return {"_id": str(ins.inserted_id)}, 201
-
-@bp.patch("/<id>")
-def patch(id):
-    try:
-        oid = ObjectId(id)
-    except InvalidId:
-        return {"error": "invalid id"}, 400
-    b = request.get_json(force=True) or {}
-    b["updated_at"] = datetime.utcnow()
-    r = current_app.db.doctors.update_one({"_id": oid}, {"$set": b})
-    return {"matched": r.matched_count, "modified": r.modified_count}, 200
-
-@bp.delete("/<id>")
-def soft_delete(id):
-    try:
-        oid = ObjectId(id)
-    except InvalidId:
-        return {"error": "invalid id"}, 400
-    r = current_app.db.doctors.update_one(
-        {"_id": oid}, {"$set": {"deleted": True, "updated_at": datetime.utcnow()}}
-    )
-    return {"deleted": r.modified_count == 1}, 200

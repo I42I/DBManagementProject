@@ -1,46 +1,79 @@
 from flask import Blueprint, request, current_app
 from bson import ObjectId
 from bson.errors import InvalidId
+from pymongo.errors import WriteError
 from datetime import datetime
 
 bp = Blueprint("prescriptions", __name__)
 
-def _validate(b):
-    for f in ["patient_id","doctor_id","consultation_id","items"]:
-        if f not in b: return f"{f} is required"
-    if not isinstance(b["items"], list) or not b["items"]:
-        return "items must be a non-empty array"
+def _validate_create(b: dict):
+    for f in ("patient_id", "doctor_id", "consultation_id", "items"):
+        if f not in b:
+            return f"{f} requis"
+    if not isinstance(b["items"], list) or len(b["items"]) == 0:
+        return "items doit être un tableau non vide"
+    # chaque item: dci + posologie requis (conforme $jsonSchema)
+    for it in b["items"]:
+        if not isinstance(it, dict):
+            return "chaque item doit être un objet"
+        if "dci" not in it:
+            return "chaque item doit contenir dci"
+        if "posologie" not in it:
+            return "chaque item doit contenir posologie"
     return None
+
+def _normalize_items(items_in):
+    """Conserve uniquement les champs autorisés et enlève les None."""
+    out = []
+    for it in items_in:
+        item = {
+            "dci": it.get("dci"),
+            "forme": it.get("forme"),
+            "posologie": it.get("posologie"),
+            "duree_j": it.get("duree_j"),
+            "contre_indications": it.get("contre_indications"),
+        }
+        item = {k: v for k, v in item.items() if v is not None}
+        out.append(item)
+    return out
+
+def _strip_none(d: dict):
+    """Supprime les paires clé: None au premier niveau (pratique pour PATCH)."""
+    return {k: v for k, v in d.items() if v is not None}
 
 @bp.post("")
 def create():
     b = request.get_json(force=True) or {}
-    err = _validate(b)
-    if err: return {"error": err}, 400
+    err = _validate_create(b)
+    if err:
+        return {"error": err}, 400
 
     db = current_app.db
+    # cast ids
     try:
         pid = ObjectId(b["patient_id"])
         did = ObjectId(b["doctor_id"])
         cid = ObjectId(b["consultation_id"])
     except InvalidId:
-        return {"error":"invalid id"}, 400
+        return {"error": "patient_id/doctor_id/consultation_id doivent être des ObjectId"}, 400
 
-    if not db.patients.find_one({"_id": pid}):      return {"error":"patient not found"}, 404
-    if not db.doctors.find_one({"_id": did}):       return {"error":"doctor not found"}, 404
-    if not db.consultations.find_one({"_id": cid}): return {"error":"consultation not found"}, 404
+    # existence de base
+    if not db.patients.find_one({"_id": pid}):
+        return {"error": "patient introuvable"}, 404
+    if not db.doctors.find_one({"_id": did}):
+        return {"error": "médecin introuvable"}, 404
+    if not db.consultations.find_one({"_id": cid}):
+        return {"error": "consultation introuvable"}, 404
 
-    items = []
-    for it in b.get("items", []):
-        if not isinstance(it, dict): continue
-        item = {}
-        if it.get("dci") is not None:        item["dci"] = it["dci"]
-        if it.get("posologie") is not None:  item["posologie"] = it["posologie"]
-        if "quantity" in it and it.get("quantity") is not None:
-            item["quantity"] = it["quantity"]
-        if "qty" in it and it.get("qty") is not None and "quantity" not in item:
-            item["quantity"] = it["qty"]
-        if item: items.append(item)
+    # facility_id optionnel (non requis par ton schema)
+    fid = None
+    if b.get("facility_id"):
+        try:
+            fid = ObjectId(b["facility_id"])
+        except InvalidId:
+            return {"error": "facility_id doit être un ObjectId"}, 400
+
+    items = _normalize_items(b["items"])
 
     doc = {
         "patient_id": pid,
@@ -48,24 +81,39 @@ def create():
         "consultation_id": cid,
         "items": items,
         "renouvellements": b.get("renouvellements", 0),
+        "notes": b.get("notes"),
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow(),
         "deleted": False
     }
-    if b.get("notes") is not None:
-        doc["notes"] = b["notes"]
+    if fid:
+        doc["facility_id"] = fid
+    # retire None éventuels (notes si absente, etc.)
+    doc = _strip_none(doc)
 
-    ins = db.prescriptions.insert_one(doc)
+    try:
+        ins = db.prescriptions.insert_one(doc)
+    except WriteError as we:
+        details = getattr(we, "details", {}) or {}
+        return {"error": "validation_mongo", "details": details}, 400
+
     return {"_id": str(ins.inserted_id)}, 201
 
 @bp.get("")
 def list_():
     q = {"deleted": {"$ne": True}}
     try:
-        if "patient_id" in request.args: q["patient_id"] = ObjectId(request.args["patient_id"])
-        if "doctor_id"  in request.args: q["doctor_id"]  = ObjectId(request.args["doctor_id"])
+        if "patient_id" in request.args:
+            q["patient_id"] = ObjectId(request.args["patient_id"])
+        if "doctor_id" in request.args:
+            q["doctor_id"] = ObjectId(request.args["doctor_id"])
+        if "consultation_id" in request.args:
+            q["consultation_id"] = ObjectId(request.args["consultation_id"])
+        if "facility_id" in request.args:
+            q["facility_id"] = ObjectId(request.args["facility_id"])
     except InvalidId:
-        return {"error":"invalid id"}, 400
+        return {"error": "paramètre id invalide"}, 400
+
     cur = current_app.db.prescriptions.find(q).sort("created_at", -1).limit(200)
     return [d for d in cur], 200
 
@@ -74,50 +122,8 @@ def get_one(id):
     try:
         oid = ObjectId(id)
     except InvalidId:
-        return {"error":"invalid id"}, 400
+        return {"error": "id invalide"}, 400
     d = current_app.db.prescriptions.find_one({"_id": oid})
-    return (d, 200) if d else ({"error":"not found"}, 404)
-
-@bp.patch("/<id>")
-def patch(id):
-    try:
-        oid = ObjectId(id)
-    except InvalidId:
-        return {"error":"invalid id"}, 400
-
-    b = request.get_json(force=True) or {}
-
-    # Optionnel: garder une validation légère des items si fournis
-    if "items" in b:
-        items = []
-        for it in b.get("items", []):
-            if not isinstance(it, dict): 
-                continue
-            item = {}
-            if it.get("dci") is not None:
-                item["dci"] = it["dci"]
-            if it.get("posologie") is not None:
-                item["posologie"] = it["posologie"]
-            if "quantity" in it and it.get("quantity") is not None:
-                item["quantity"] = it["quantity"]
-            if "qty" in it and it.get("qty") is not None and "quantity" not in item:
-                item["quantity"] = it["qty"]
-            if item:
-                items.append(item)
-        b["items"] = items
-
-    b["updated_at"] = datetime.utcnow()
-    r = current_app.db.prescriptions.update_one({"_id": oid}, {"$set": b})
-    return {"matched": r.matched_count, "modified": r.modified_count}, 200
+    return (d, 200) if d else ({"error": "introuvable"}, 404)
 
 
-@bp.delete("/<id>")
-def soft_delete(id):
-    try:
-        oid = ObjectId(id)
-    except InvalidId:
-        return {"error":"invalid id"}, 400
-    r = current_app.db.prescriptions.update_one(
-        {"_id": oid}, {"$set": {"deleted": True, "updated_at": datetime.utcnow()}}
-    )
-    return {"deleted": r.modified_count == 1}, 200
