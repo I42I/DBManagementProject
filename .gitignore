@@ -85,13 +85,16 @@ MANIFEST
 
 # --- Documentation / drafts ---
 brouillon.md
+
+backend/output_gets.txt/
 backend/test_gets.ps1
-backend/output_test_gets.json
+backend/output_test_gets.txt
 notes.txt
 notes/
 temp/
 tmp/
 Test 
+
 
 # --- Bases de données locales ---
 db/*.json
