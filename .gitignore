@@ -102,3 +102,5 @@ db/*.csv
 db/*.dump
 *.db
 *.sqlite
+
+frontend.zip
