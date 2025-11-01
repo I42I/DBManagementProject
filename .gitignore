@@ -103,4 +103,7 @@ db/*.dump
 *.db
 *.sqlite
 
-frontend.zip
+# --- Archives ---S
+
+*.zip
+!frontend.zip   
