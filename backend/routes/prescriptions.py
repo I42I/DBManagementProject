@@ -1,6 +1,6 @@
 # ===========================================================
 #  prescriptions.py — Gestion des ordonnances
-#  Auteur : Yaya Issakha (ECAM - projet NoSQL)
+#
 #  Rôle :
 #    - Créer une prescription (liée patient / médecin / consultation)
 #    - Lister les prescriptions (filtres par IDs + période)
@@ -133,7 +133,7 @@ def create():
     if not db.consultations.find_one({"_id": cid}):
         return {"error": "consultation introuvable"}, 404
 
-    # 4) facility_id optionnel (non requis par ton schéma) -> cast si fourni
+    # 4) facility_id optionnel 
     fid = None
     if b.get("facility_id"):
         try:

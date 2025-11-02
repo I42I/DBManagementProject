@@ -1,6 +1,6 @@
 # ===========================================================
 #  contacts.py — Réception des messages du formulaire de contact
-#  Auteur : Yaya Issakha — ECAM (Projet NoSQL / Frontend intégration)
+
 #
 #  Endpoints:
 #    POST /api/contacts  → enregistre un message envoyé depuis le site

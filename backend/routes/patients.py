@@ -1,6 +1,6 @@
 # ===========================================================
 #  patients.py — Gestion des patients (patients collection)
-#  Auteur : Yaya Issakha — ECAM (Projet NoSQL)
+# 
 #
 #  Endpoints:
 #    POST /api/patients       -> créer un patient
@@ -110,8 +110,7 @@ def list_():
         {"identite": 1, "contacts.phone": 1, "identifiant": 1}
     ).sort("created_at", -1).limit(200)
 
-    # NOTE : On renvoie tel quel comme dans tes autres routes.
-    # Si tu veux JSON-safe partout, on pourra uniformiser avec jsonify + cast.
+    
     return [d for d in cur], 200
 
 # -------------------------------
@@ -133,12 +132,12 @@ def get_one(id):
 def create():
     b = request.get_json(force=True) or {}
 
-    # 1) Validation fonctionnelle
+    #  Validation fonctionnelle
     err = _validate_patient(b)
     if err:
         return {"error": err}, 400
 
-    # 2) facility_id requis par le $jsonSchema → cast ou génération mock
+    #  facility_id requis par le $jsonSchema → cast ou génération mock
     if b.get("facility_id"):
         try:
             b["facility_id"] = ObjectId(b["facility_id"])
@@ -147,7 +146,7 @@ def create():
     else:
         b["facility_id"] = ObjectId()
 
-    # 3) Normalisation identité
+    #  Normalisation identité
     ident = b["identite"]
     ident["prenom"] = str(ident["prenom"]).strip().capitalize()
     ident["nom"]    = str(ident["nom"]).strip().upper()
@@ -160,20 +159,20 @@ def create():
         ident["date_naissance"] = dt
     b["identite"] = ident
 
-    # 4) Timestamps
+    #  Timestamps
     now = datetime.utcnow().replace(tzinfo=timezone.utc)
     b.setdefault("created_at", now)
     b.setdefault("updated_at", now)
     b.setdefault("deleted", False)
 
-    # 5) Identifiant lisible auto si absent
+    #  Identifiant lisible auto si absent
     if not b.get("identifiant"):
         b["identifiant"] = _gen_patient_ident(current_app.db)
 
-    # 6) Nettoyage None (ex: contacts.absent)
+    #  Nettoyage None (ex: contacts.absent)
     doc = _strip_none(b)
 
-    # 7) Insertion Mongo
+    #  Insertion Mongo
     try:
         ins = current_app.db.patients.insert_one(doc)
     except WriteError as we:

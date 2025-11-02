@@ -1,6 +1,6 @@
 # ===========================================================
 #  payments.py — Gestion des paiements
-#  Auteur : Yaya Issakha (ECAM - projet NoSQL)
+#  
 #  Rôle :
 #    - Enregistrer un paiement (liée à un patient, consultation, etc.)
 #    - Lister les paiements (filtrables par status, method, etc.)
@@ -95,14 +95,14 @@ def _validate(b):
 def create():
     b = request.get_json(force=True) or {}
 
-    # Étape 1 — validation
+    #  validation
     err = _validate(b)
     if err:
         return {"error": err}, 400
 
     db = current_app.db
 
-    # Étape 2 — patient_id obligatoire
+    #  patient_id obligatoire
     try:
         pid = ObjectId(b["patient_id"])
     except InvalidId:
@@ -110,7 +110,7 @@ def create():
     if not db.patients.find_one({"_id": pid}):
         return {"error": "patient introuvable"}, 404
 
-    # Étape 3 — références optionnelles
+    # références optionnelles
     try:
         appt_id    = ObjectId(b["appointment_id"])   if b.get("appointment_id")   else None
         consult_id = ObjectId(b["consultation_id"])  if b.get("consultation_id")  else None
@@ -118,7 +118,7 @@ def create():
     except InvalidId:
         return {"error": "références optionnelles: ObjectId invalide"}, 400
 
-    # Étape 4 — dates optionnelles
+    # dates optionnelles
     due_date = _iso_to_dt(b["due_date"]) if isinstance(b.get("due_date"), str) else None
     if isinstance(b.get("due_date"), str) and not due_date:
         return {"error": "due_date doit être au format ISO 8601"}, 400
@@ -127,7 +127,7 @@ def create():
     if isinstance(b.get("paid_at"), str) and not paid_at:
         return {"error": "paid_at doit être au format ISO 8601"}, 400
 
-    # Étape 5 — normalisation des items
+    #  normalisation des items
     items = []
     for it in b.get("items", []):
         ni = {
@@ -142,7 +142,7 @@ def create():
                 return {"error": "items.ref_id doit être un ObjectId"}, 400
         items.append(_strip_none(ni))
 
-    # Étape 6 — construction du document Mongo
+    #  construction du document Mongo
     now = datetime.utcnow().replace(tzinfo=timezone.utc)
     doc = _strip_none({
         "patient_id": pid,
@@ -162,13 +162,14 @@ def create():
         "deleted": False,
     })
 
-    # Étape 7 — insertion MongoDB
+    #  insertion MongoDB
     try:
         ins = db.payments.insert_one(doc)
     except WriteError as we:
         details = getattr(we, "details", {}) or {}
         return {"error": "validation_mongo", "details": details}, 400
 
+    #  retour
     return {"_id": str(ins.inserted_id)}, 201
 
 

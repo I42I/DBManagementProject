@@ -1,6 +1,6 @@
 # ===========================================================
 #  notifications.py — Gestion des notifications (SMS / email / push)
-#  Auteur : Yaya Issakha — ECAM (Projet NoSQL)
+# 
 #
 #  Endpoints:
 #    POST   /api/notifications        -> créer une notification
@@ -90,14 +90,14 @@ def _validate(b: dict):
 def create():
     b = request.get_json(force=True) or {}
 
-    # 1) Validation fonctionnelle
+    #  Validation fonctionnelle
     err = _validate(b)
     if err:
         return {"error": err}, 400
 
     db = current_app.db
 
-    # 2) Cast des ObjectId optionnels
+    #  Cast des ObjectId optionnels
     to_pid = _cast_oid(b.get("to_patient_id"))
     if b.get("to_patient_id") is not None and to_pid is None:
         return {"error": "to_patient_id doit être un ObjectId"}, 400
@@ -110,7 +110,7 @@ def create():
     if b.get("ref_id") is not None and ref_id is None:
         return {"error": "ref_id doit être un ObjectId"}, 400
 
-    # 3) Vérifications d’existence (optionnelles mais utiles)
+    #  Vérifications d’existence (optionnelles mais utiles)
     if to_pid and not db.patients.find_one({"_id": to_pid}, {"_id": 1}):
         return {"error": "to_patient_id introuvable"}, 404
     if to_did and not db.doctors.find_one({"_id": to_did}, {"_id": 1}):
@@ -127,7 +127,7 @@ def create():
         if coll and not db[coll].find_one({"_id": ref_id}, {"_id": 1}):
             return {"error": f"ref_id introuvable pour ref_type={b['ref_type']}"}, 404
 
-    # 4) Dates optionnelles
+    #  Dates optionnelles
     send_at    = _iso_to_dt(b.get("send_at"))    if b.get("send_at")    else None
     sent_at    = _iso_to_dt(b.get("sent_at"))    if b.get("sent_at")    else None
     expires_at = _iso_to_dt(b.get("expires_at")) if b.get("expires_at") else None
@@ -145,7 +145,7 @@ def create():
 
     now = datetime.utcnow().replace(tzinfo=timezone.utc)
 
-    # 5) Construction du document Mongo (pense à l’index TTL sur expires_at)
+    #  Construction du document Mongo (pense à l’index TTL sur expires_at)
     doc = _strip_none({
         "channel": b["channel"],              # sms|email|push
         "status":  b["status"],               # queued|sent|failed|read
@@ -164,7 +164,7 @@ def create():
         "deleted": False,
     })
 
-    # 6) Insertion
+    # Insertion
     try:
         ins = db.notifications.insert_one(doc)
     except WriteError as we:

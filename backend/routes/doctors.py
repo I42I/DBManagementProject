@@ -1,6 +1,6 @@
 # ===========================================================
 #  doctors.py — Gestion des médecins (doctors collection)
-#  Auteur : Yaya Issakha — ECAM (Projet NoSQL)
+# 
 #
 #  Endpoints:
 #    POST /api/doctors        -> créer un médecin
@@ -113,12 +113,12 @@ def get_one(id):
 def create():
     b = request.get_json(force=True) or {}
 
-    # 1️⃣ Validation fonctionnelle
+    # Validation fonctionnelle
     err = _validate_create(b)
     if err:
         return jsonify(error=err), 400
 
-    # 2️⃣ Cast facility_id ou génération
+    # Cast facility_id ou génération
     if b.get("facility_id"):
         try:
             b["facility_id"] = ObjectId(b["facility_id"])
@@ -127,21 +127,21 @@ def create():
     else:
         b["facility_id"] = ObjectId()  # génération automatique (mock facility)
 
-    # 3️⃣ Normalisation des chaînes
+    # Normalisation des chaînes
     b["identite"]["prenom"] = b["identite"]["prenom"].strip().capitalize()
     b["identite"]["nom"] = b["identite"]["nom"].strip().upper()
     b["specialites"] = [s.strip() for s in b["specialites"]]
 
-    # 4️⃣ Timestamps UTC
+    # Timestamps UTC
     now = datetime.utcnow().replace(tzinfo=timezone.utc)
     b["created_at"] = now
     b["updated_at"] = now
     b["deleted"] = False
 
-    # 5️⃣ Nettoyage des None
+    # Nettoyage des None
     doc = _strip_none(b)
 
-    # 6️⃣ Insertion Mongo
+    # Insertion Mongo
     try:
         ins = current_app.db.doctors.insert_one(doc)
     except WriteError as we:

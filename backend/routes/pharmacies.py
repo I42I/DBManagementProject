@@ -1,6 +1,7 @@
 # ===========================================================
 #  pharmacies.py — Gestion des délivrances en pharmacie
-#  Auteur : Yaya Issakha — ECAM (Projet NoSQL)
+#  Rôle:
+``
 #
 #  Endpoints:
 #    POST /api/pharmacies        -> créer un enregistrement de délivrance

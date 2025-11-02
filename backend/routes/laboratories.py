@@ -1,6 +1,6 @@
 # ===========================================================
 #  laboratories.py — Gestion des analyses de laboratoire
-#  Auteur : Yaya Issakha (ECAM - projet NoSQL)
+#  
 #  Rôle :
 #    - Créer un document de laboratoire (ordonnance d’analyses)
 #    - Lister les analyses filtrables par patient, médecin, statut, etc.
@@ -85,14 +85,14 @@ def _validate(b):
 def create():
     b = request.get_json(force=True) or {}
 
-    # Étape 1 — validation complète
+    # validation complète
     err = _validate(b)
     if err:
         return {"error": err}, 400
 
     db = current_app.db
 
-    # Étape 2 — conversion ObjectId et existence patient/médecin
+    # conversion ObjectId et existence patient/médecin
     try:
         pid = ObjectId(b["patient_id"])
         did = ObjectId(b["doctor_id"])
@@ -104,7 +104,7 @@ def create():
     if not db.doctors.find_one({"_id": did}):
         return {"error": "médecin introuvable"}, 404
 
-    # Étape 3 — facility_id (généré si absent)
+    # facility_id (généré si absent)
     if b.get("facility_id"):
         try:
             fid = ObjectId(b["facility_id"])
@@ -113,7 +113,7 @@ def create():
     else:
         fid = ObjectId()  # généré automatiquement
 
-    # Étape 4 — appointment_id optionnel
+    #  appointment_id optionnel
     ap_id = None
     if b.get("appointment_id"):
         try:
@@ -123,7 +123,7 @@ def create():
         if not db.appointments.find_one({"_id": ap_id}):
             return {"error": "appointment introuvable"}, 404
 
-    # Étape 5 — Normalisation des tests
+    # Normalisation des tests
     tests = []
     for t in b.get("tests", []):
         nt = {
@@ -136,11 +136,11 @@ def create():
                 nt[k] = t[k]
         tests.append(_strip_none(nt))
 
-    # Étape 6 — dates automatiques
+    # dates automatiques
     now = datetime.utcnow().replace(tzinfo=timezone.utc)
     date_reported = now if b.get("status") == "completed" else None
 
-    # Étape 7 — constitution du document Mongo
+    # constitution du document Mongo
     doc = _strip_none({
         "patient_id": pid,
         "doctor_id": did,
@@ -156,7 +156,7 @@ def create():
         "deleted": False,
     })
 
-    # Étape 8 — insertion en base
+    # insertion en base
     try:
         ins = db.lab_results.insert_one(doc)
     except WriteError as we:

@@ -1,6 +1,6 @@
 # ===========================================================
 #  consultations.py — Gestion des consultations médicales
-#  Auteur : Yaya Issakha (ECAM - projet NoSQL)
+#  
 #  Rôle :
 #    - Créer une consultation (patient ↔ médecin, notes, symptômes…)
 #    - Lister les consultations (avec filtres)
@@ -57,27 +57,27 @@ def _validate(b):
 def create():
     b = request.get_json(force=True) or {}
 
-    # Étape 1 — validation minimale (présence + date ISO)
+    # Validation minimale (présence + date ISO)
     err = _validate(b)
     if err:
         return {"error": err}, 400
 
     db = current_app.db
 
-    # Étape 2 — cast ObjectId obligatoires
+    # Cast ObjectId obligatoires
     try:
         pid = ObjectId(b["patient_id"])
         did = ObjectId(b["doctor_id"])
     except InvalidId:
         return {"error": "patient_id/doctor_id doivent être des ObjectId"}, 400
 
-    # Étape 3 — existence patient/médecin
+    # existence patient/médecin
     if not db.patients.find_one({"_id": pid}):
         return {"error": "patient introuvable"}, 404
     if not db.doctors.find_one({"_id": did}):
         return {"error": "médecin introuvable"}, 404
 
-    # Étape 4 — facility_id (requis par ton schéma) → générer si absent
+    # facility_id (requis par ton schéma) → générer si absent
     if b.get("facility_id"):
         try:
             fid = ObjectId(b["facility_id"])
@@ -86,7 +86,7 @@ def create():
     else:
         fid = ObjectId()
 
-    # Étape 5 — appointment_id optionnel (et vérification d’existence si fourni)
+    #  appointment_id optionnel (et vérification d’existence si fourni)
     ap_id = None
     if b.get("appointment_id"):
         try:
@@ -96,12 +96,12 @@ def create():
         if not db.appointments.find_one({"_id": ap_id}):
             return {"error": "appointment introuvable"}, 404
 
-    # Étape 6 — date/heure de la consultation (UTC)
+    # Date/heure de la consultation (UTC)
     dt = _iso_to_dt(b["date_time"]) if isinstance(b.get("date_time"), str) else (
         b.get("date_time") or datetime.utcnow().replace(tzinfo=timezone.utc)
     )
 
-    # Étape 7 — validation "douce" des champs optionnels selon ton validator
+    # Validation "douce" des champs optionnels selon notre validator
     #   - symptomes / diagnostic / notes : string si présent
     #   - vital_signs : object/dict si présent
     #   - attachments : array/list si présent
@@ -122,7 +122,7 @@ def create():
     if attach is not None and not isinstance(attach, list):
         return {"error": "attachments doit être un tableau si présent"}, 400
 
-    # Étape 8 — constitution du document Mongo
+    # Constitution du document Mongo
     doc = {
         "patient_id":  pid,
         "doctor_id":   did,
@@ -140,10 +140,10 @@ def create():
     if ap_id:
         doc["appointment_id"] = ap_id
 
-    # ⚠️ Étape 9 — retirer tous les None (évite `null` → validator KO)
+    # Retirer tous les None (évite `null` → validator KO)
     doc = _strip_none(doc)
 
-    # Étape 10 — insertion
+    # Insertion
     try:
         ins = db.consultations.insert_one(doc)
     except WriteError as we:

@@ -1,6 +1,6 @@
 # ===========================================================
 #  health_authorities.py — Rapports vers l'autorité de santé
-#  Auteur : Yaya Issakha — ECAM (Projet NoSQL)
+# 
 #
 #  Endpoints:
 #    POST /api/health_authorities        -> créer un rapport
@@ -79,19 +79,19 @@ def _validate(b: dict):
 def create():
     b = request.get_json(silent=True) or {}
 
-    # 1) Validation fonctionnelle
+    # Validation fonctionnelle
     err = _validate(b)
     if err:
         return jsonify(error=err), 400
 
-    # 2) Cast IDs
+    # Cast IDs
     try:
         facility_id = ObjectId(b["facility_id"])
     except InvalidId:
         return jsonify(error="facility_id doit être un ObjectId"), 400
-    # (Option : vérifier existence dans db.facilities si tu as la collection)
+    # (Option : vérifier existence dans db.facilities si on a la collection)
 
-    # 3) Dates de période (obligatoires)
+    # Dates de période (obligatoires)
     try:
         period_start = _iso_to_dt(b["period_start"], "period_start")
         period_end   = _iso_to_dt(b["period_end"], "period_end")
@@ -101,7 +101,7 @@ def create():
     if period_end < period_start:
         return jsonify(error="period_end doit être >= period_start"), 400
 
-    # 4) Statut + dates optionnelles
+    # Statut + dates optionnelles
     submitted_at = None
     if b.get("submitted_at"):
         try:
@@ -111,7 +111,7 @@ def create():
 
     now = datetime.utcnow().replace(tzinfo=timezone.utc)
 
-    # 5) Document propre pour Mongo
+    # Document propre pour Mongo
     doc = _strip_none({
         "facility_id": facility_id,
         "report_type": b["report_type"],
@@ -127,7 +127,7 @@ def create():
         "deleted": False,
     })
 
-    # 6) Insertion + gestion erreur Mongo
+    # Insertion + gestion erreur Mongo
     try:
         ins = current_app.db.health_authorities.insert_one(doc)
     except WriteError as we:

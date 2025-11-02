@@ -1,6 +1,6 @@
 # ===========================================================
 #  appointments.py — Gestion des rendez-vous médicaux
-#  Auteur : Yaya Issakha (ECAM - projet NoSQL)
+#  
 #  Description :
 #    Ce module gère les opérations CRUD principales liées
 #    aux rendez-vous (appointments) entre patients et médecins.
@@ -63,27 +63,27 @@ def _validate(b):
 def create():
     b = request.get_json(force=True) or {}
 
-    # Étape 1 : validation des champs de base
+    # Validation des champs de base
     err = _validate(b)
     if err:
         return {"error": err}, 400
 
     db = current_app.db
 
-    # Étape 2 : conversion des identifiants en ObjectId
+    # Conversion des identifiants en ObjectId
     try:
         pid = ObjectId(b["patient_id"])
         did = ObjectId(b["doctor_id"])
     except InvalidId:
         return {"error": "patient_id/doctor_id doivent être des ObjectId"}, 400
 
-    # Étape 3 : vérification que le patient et le médecin existent bien
+    # Vérification que le patient et le médecin existent bien
     if not db.patients.find_one({"_id": pid}):
         return {"error": "patient introuvable"}, 404
     if not db.doctors.find_one({"_id": did}):
         return {"error": "médecin introuvable"}, 404
 
-    # Étape 4 : facility_id obligatoire selon ton schéma → générer si absent
+    # facility_id obligatoire selon ton schéma → générer si absent
     if b.get("facility_id"):
         try:
             fid = ObjectId(b["facility_id"])
@@ -92,7 +92,7 @@ def create():
     else:
         fid = ObjectId()  # généré automatiquement si non fourni
 
-    # Étape 5 : constitution du document Mongo
+    # Constitution du document Mongo
     doc = {
         "patient_id": pid,
         "doctor_id": did,
@@ -106,11 +106,11 @@ def create():
         "deleted": False
     }
 
-    # ⚠️ Étape 6 : suppression des champs None (clé supprimée au lieu de valeur null)
+    # Suppression des champs None (clé supprimée au lieu de valeur null)
     print("[APPT DOC BEFORE STRIP]", doc)
     doc = _strip_none(doc)
 
-    # Étape 7 : insertion en base
+    # Insertion en base
     try:
         print("[APPT DOC AFTER  STRIP]", doc)
         ins = db.appointments.insert_one(doc)
@@ -121,7 +121,7 @@ def create():
             "details": getattr(we, "details", {}) or {}
         }, 400
 
-    # Étape 8 : réponse OK
+    # Réponse OK
     return {"_id": str(ins.inserted_id)}, 201
 
 
