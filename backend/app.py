@@ -1,25 +1,23 @@
 # app.py
-from flask import Flask, jsonify, request, g
-from flask.json.provider import DefaultJSONProvider  # -> permet de personnaliser la sérialisation JSON
+from flask import Flask, jsonify, request, g, send_from_directory
 from flask_cors import CORS                         # -> CORS pour que le front (5173) appelle l'API (5000)
 from pymongo import MongoClient
 from bson import ObjectId
 from datetime import datetime, date, timezone
 from logging.handlers import RotatingFileHandler
 import logging, os, uuid
+from pathlib import Path
 
 # =============================
 # 1) App + JSON provider
 # =============================
 app = Flask(__name__)
 
-class MongoJSON(DefaultJSONProvider):
-    """Sérialise proprement les types Mongo/Datetime en JSON."""
+class MongoJSON(app.json_provider_class):
     def default(self, o):
         if isinstance(o, ObjectId):
-            return str(o)  # ObjectId -> "64f..."
+            return str(o)
         if isinstance(o, (datetime, date)):
-            # Forcer ISO 8601 en Z (UTC). Si datetime naïf, on le tag en UTC.
             if isinstance(o, datetime) and o.tzinfo is None:
                 o = o.replace(tzinfo=timezone.utc)
             return o.isoformat().replace("+00:00", "Z")
@@ -27,29 +25,21 @@ class MongoJSON(DefaultJSONProvider):
 
 app.json = MongoJSON(app)
 
-# CORS : autorise le front (Vite/5173). Ajoute d'autres origines si besoin.
-CORS(app, resources={
-    r"/*": {"origins": ["http://localhost:5173", "http://127.0.0.1:5173"]}
-})
+STATIC_DIR = Path(__file__).resolve().parent / "static"
 
-# =============================
-# 2) Mode lecture seule (toggle par variable d'env)
-# =============================
-# Idée : en démo ou pendant la phase "GET only", on bloque POST/PATCH/DELETE.
-READ_ONLY = os.getenv("READ_ONLY", "1").lower() in ("1", "true", "yes")
+@app.route("/", defaults={"path": ""})
+@app.route("/<path:path>")
+def frontend(path):
+    target = STATIC_DIR / path
+    if path and target.exists():
+        return send_from_directory(STATIC_DIR, path)
+    return send_from_directory(STATIC_DIR, "index.html")
 
-# @app.before_request
-# def _enforce_read_only():
-#     # On laisse passer les sondes de vie
-#     if request.path in ("/health", "/api/health", "/ready"):
-#         return
-#     # Si READ_ONLY = True -> seules les requêtes GET/HEAD/OPTIONS passent
-#     if READ_ONLY and request.method not in ("GET", "HEAD", "OPTIONS"):
-#         return jsonify({"error": "read_only_mode", "message": "Writes are disabled"}), 405
+CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 
 # =============================
-# 3) Logs avec rotation (évite d'avoir un fichier énorme)
+# 2) Logs avec rotation (évite d'avoir un fichier énorme)
 # =============================
 os.makedirs("logs", exist_ok=True)
 handler = RotatingFileHandler("logs/backend_run.log", maxBytes=5_000_000, backupCount=5)
@@ -74,8 +64,9 @@ def _after(resp):
     app.logger.info(f"<- {g.request_id} {request.method} {request.path} {resp.status_code}")
     return resp
 
+
 # =============================
-# 4) Connexion MongoDB
+# 3) Connexion MongoDB
 # =============================
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
 DB_NAME   = os.getenv("MONGO_DB", "hospital")
@@ -89,50 +80,23 @@ client = MongoClient(
 )
 app.db = client[DB_NAME]
 
-# =============================
-# 5) Index & Seed
-# =============================
-def ensure_minimal_indexes(db):
-    """Ici, juste un TTL de démonstration (si jamais tu ajoutes expires_at sur notifications)."""
-    try:
-        db.notifications.create_index(
-            "expires_at",
-            name="ttl_expires_at",
-            expireAfterSeconds=0
-        )
-        app.logger.info("[indexes] TTL notifications OK")
-    except Exception as e:
-        app.logger.warning(f"[indexes] TTL notifications skipped: {e}")
-
-def bootstrap_indexes_and_seed():
-    """Lancé une seule fois (voir garde reloader plus bas)."""
-    ensure_minimal_indexes(app.db)
-    try:
-        if os.getenv("SEED_ON_START", "false").lower() in ("1", "true", "yes"):
-            import seed  # seed.py à la racine backend
-            if hasattr(seed, "load_seed"):
-                seed.load_seed(app.db)
-                app.logger.info("[seed] load_seed OK")
-            elif hasattr(seed, "main"):
-                try:
-                    seed.main(app.db)  # préfère cette sig
-                except TypeError:
-                    seed.main()        # compat
-                app.logger.info("[seed] main OK")
-        else:
-            app.logger.info("[seed] SEED_ON_START=false -> pas de seed.")
-    except ModuleNotFoundError:
-        app.logger.info("[seed] seed.py absent -> aucun seed.")
-    except Exception as e:
-        app.logger.exception(f"[seed] erreur de bootstrap: {e}")
-
-# ⚠️ Garde pour éviter double bootstrap avec le reloader Flask
-if not (os.getenv("FLASK_DEBUG", "0").lower() in ("1","true","yes")
-        and os.getenv("WERKZEUG_RUN_MAIN") != "true"):
-    bootstrap_indexes_and_seed()
 
 # =============================
-# 6) Health / Ready
+# 4) Index & Seed
+# =============================
+def bootstrap():
+    if os.getenv("SEED_ON_START", "false").lower() in ("1", "true", "yes"):
+        try:
+            import seed
+            seed.load_seed(app.db) if hasattr(seed, "load_seed") else seed.main(app.db)
+            app.logger.info("[seed] done")
+        except Exception as exc:
+            app.logger.warning("[seed] skipped: %s", exc)
+
+bootstrap()
+
+# =============================
+# 5) Health / Ready
 # =============================
 @app.get("/health")
 def health():
@@ -151,8 +115,9 @@ def ready():
         app.logger.exception(e)
         return {"status": "not-ready", "error": str(e)}, 503
 
+
 # =============================
-# 7) Error handlers uniformes
+# 6) Error handlers uniformes
 # =============================
 @app.errorhandler(404)
 def not_found(e):
@@ -175,8 +140,9 @@ def server_error(e):
     app.logger.exception(e)
     return jsonify({"error": "Internal Server Error"}), 500
 
+
 # =============================
-# 8) Blueprints (routes)
+# 7) Blueprints (routes)
 # =============================
 from routes.patients import bp as patients_bp
 from routes.doctors import bp as doctors_bp
@@ -200,11 +166,11 @@ app.register_blueprint(pharmacies_bp,      url_prefix="/api/pharmacies")
 app.register_blueprint(payments_bp,        url_prefix="/api/payments")
 app.register_blueprint(notifications_bp,   url_prefix="/api/notifications")
 app.register_blueprint(ha_bp,              url_prefix="/api/health_authorities")
-app.register_blueprint(contacts_bp, url_prefix="/api/contacts")
+app.register_blueprint(contacts_bp,        url_prefix="/api/contacts")
 
 
 # =============================
-# 9) Main
+# 8) Main
 # =============================
 if __name__ == "__main__":
     debug = os.getenv("FLASK_DEBUG", "0").lower() in ("1", "true", "yes")

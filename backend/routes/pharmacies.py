@@ -1,7 +1,6 @@
 # ===========================================================
 #  pharmacies.py — Gestion des délivrances en pharmacie
 #  Rôle:
-``
 #
 #  Endpoints:
 #    POST /api/pharmacies        -> créer un enregistrement de délivrance
