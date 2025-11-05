@@ -57,9 +57,9 @@ export default function Patients() {
     if (!window.confirm(`Voulez-vous vraiment supprimer le patient ${name} ?`)) return
     try {
       await patients.delete(id)
-      load(query) // Rafraîchir la liste
+      load() // Rafraîchir la liste
     } catch (e: any) {
-      setErr(e.message || 'Erreur lors de la suppression')
+      setError(e.message || 'Erreur lors de la suppression')
     }
   }
 
@@ -144,19 +144,19 @@ export default function Patients() {
           <form onSubmit={onSubmit} className="card p-6 md:col-span-1 space-y-3">
             <h3 className="font-semibold">Ajouter un patient (dev)</h3>
             <input className="border rounded-xl px-3 py-2" placeholder="Prénom"
-                   value={prenom} onChange={e=>setPrenom(e.target.value)} />
+              value={prenom} onChange={e => setPrenom(e.target.value)} />
             <input className="border rounded-xl px-3 py-2" placeholder="Nom"
-                   value={nom} onChange={e=>setNom(e.target.value)} />
+              value={nom} onChange={e => setNom(e.target.value)} />
             <input className="border rounded-xl px-3 py-2" type="date"
-                   value={dateN} onChange={e=>setDateN(e.target.value)} />
+              value={dateN} onChange={e => setDateN(e.target.value)} />
             <select className="border rounded-xl px-3 py-2"
-                    value={sexe} onChange={e=>setSexe(e.target.value as any)}>
+              value={sexe} onChange={e => setSexe(e.target.value as any)}>
               <option value="M">M</option>
               <option value="F">F</option>
               <option value="X">X</option>
             </select>
             <input className="border rounded-xl px-3 py-2" placeholder="Téléphone (optionnel)"
-                   value={phone} onChange={e=>setPhone(e.target.value)} />
+              value={phone} onChange={e => setPhone(e.target.value)} />
             <button className="btn-primary w-full" disabled={submitting}>
               {submitting ? 'Ajout…' : 'Ajouter'}
             </button>

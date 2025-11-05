@@ -1,5 +1,35 @@
 # 🏥 Hospital Management – NoSQL Backend
 
+---
+
+## Docker Commands
+
+This project is fully containerized for both production and development environments.
+
+### Production Mode
+
+The production setup runs the Flask backend and serves the frontend build from a single container.
+
+To build and run the application in production mode:
+```bash
+docker-compose up --build -d
+```
+The application will be available at `http://localhost:5000`.
+
+### Development Mode
+
+The development setup uses a multi-container environment with hot-reloading for both the frontend and backend.
+
+To run in development mode:
+```bash
+docker-compose -f docker-compose.dev.yml up --build -d
+```
+- The frontend (Vite) will be on `http://localhost:5173`.
+- The backend (Flask) will be on `http://localhost:5000`.
+- Mongo Express will be on `http://localhost:8081`.
+
+---
+
 ## Overview
 
 This project implements a **Flask-based backend** for a hospital digitalization platform.  
@@ -142,7 +172,7 @@ The backend is designed for horizontal scaling and schema flexibility:
 
 ## Authors
 - YAYA LIBIS Issakha (21252) 
-- Musareel Bruno (23375)
+- MASUREEL Bruno (23375)
 - CHOKAYRI Omar (22379)
 
 ---

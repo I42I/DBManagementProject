@@ -1,4 +1,5 @@
 import { http } from '../http'
+import { scrub } from '../clean'
 
 // ===== Types alignés sur ton backend =====
 
@@ -30,8 +31,8 @@ export type NewDoctor = {
 
 export function doctorLabel(d: DoctorListItem | DoctorFull) {
   const prenom = d.identite?.prenom ?? ''
-  const nom    = d.identite?.nom ?? ''
-  const spec   = d.specialites && d.specialites.length ? ` (${d.specialites[0]})` : ''
+  const nom = d.identite?.nom ?? ''
+  const spec = d.specialites && d.specialites.length ? ` (${d.specialites[0]})` : ''
   return `${prenom} ${nom}${spec}`.trim()
 }
 
