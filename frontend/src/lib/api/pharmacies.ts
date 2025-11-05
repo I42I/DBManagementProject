@@ -49,4 +49,7 @@ export const pharmacies = {
   getById: (id: string) => http<Pharmacy>(`/api/pharmacies/${id}`),
   create: (body: NewPharmacy) =>
     http<{ _id: string }>(`/api/pharmacies`, { method: 'POST', body: JSON.stringify(body) }),
+  update: (id: string, body: Partial<NewPharmacy>) =>
+    http<Pharmacy>(`/api/pharmacies/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  delete: (id: string) => http<void>(`/api/pharmacies/${id}`, { method: 'DELETE' }),
 }

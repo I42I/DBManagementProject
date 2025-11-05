@@ -22,7 +22,7 @@ from datetime import datetime, timezone
 from utils import strip_none, iso_to_dt, validate_objectid, check_exists
 
 
-bp = Blueprint("health_authorities", __name__)  # url_prefix="/api/health_authorities" dans app.py
+bp = Blueprint("health_authorities", __name__)
 
 ALLOWED_REPORT_TYPES = {"case_summary", "disease_reporting", "inventory", "other"}
 ALLOWED_STATUS = {"draft", "submitted", "accepted", "rejected"}
@@ -52,7 +52,7 @@ def _validate(b: dict):
         return f"report_type invalide ({'|'.join(sorted(ALLOWED_REPORT_TYPES))})"
     if b.get("status") not in ALLOWED_STATUS:
         return f"status invalide ({'|'.join(sorted(ALLOWED_STATUS))})"
-    # payload optionnel mais s'il existe => dict
+    
     if "payload" in b and b["payload"] is not None and not isinstance(b["payload"], dict):
         return "payload doit être un objet"
     return None
@@ -74,7 +74,6 @@ def create():
         facility_id = ObjectId(b["facility_id"])
     except InvalidId:
         return jsonify(error="facility_id doit être un ObjectId"), 400
-    # (Option : vérifier existence dans db.facilities si on a la collection)
 
     # Dates de période (obligatoires)
     try:
@@ -146,15 +145,6 @@ def list_():
         if st not in ALLOWED_STATUS:
             return jsonify(error=f"status invalide ({'|'.join(sorted(ALLOWED_STATUS))})"), 400
         q["status"] = st
-
-    # (Option) Filtres de période : ?from=YYYY…&to=YYYY… sur created_at
-    # if "from" in request.args or "to" in request.args:
-    #     rng = {}
-    #     if "from" in request.args:
-    #         rng["$gte"] = _iso_to_dt(request.args["from"], "from")
-    #     if "to" in request.args:
-    #         rng["$lte"] = _iso_to_dt(request.args["to"], "to")
-    #     q["created_at"] = rng
 
     cur = current_app.db.health_authorities.find(q).sort("created_at", -1).limit(200)
     return jsonify([_jsonify(d) for d in cur]), 200

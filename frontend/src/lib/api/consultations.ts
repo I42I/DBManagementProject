@@ -87,4 +87,14 @@ export const consultations = {
     const created = await consultations.create(body)
     return consultations.getById(created._id)
   },
+
+  // Mise à jour
+  update: (id: string, body: Partial<NewConsultation>) =>
+    http<ConsultationFull>(`/api/consultations/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
+
+  // Suppression
+  delete: (id: string) => http<void>(`/api/consultations/${id}`, { method: 'DELETE' }),
 }

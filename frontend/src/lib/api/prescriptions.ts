@@ -74,4 +74,14 @@ export const prescriptions = {
     const created = await prescriptions.create(body)
     return prescriptions.getById(created._id)
   },
+
+  // Mise à jour
+  update: (id: string, body: Partial<NewPrescription>) =>
+    http<PrescriptionFull>(`/api/prescriptions/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
+
+  // Suppression
+  delete: (id: string) => http<void>(`/api/prescriptions/${id}`, { method: 'DELETE' }),
 }

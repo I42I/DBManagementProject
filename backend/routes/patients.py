@@ -21,7 +21,7 @@ from bson.errors import InvalidId
 from pymongo.errors import WriteError
 from pymongo import ReturnDocument
 from datetime import datetime, timezone
-from utils import strip_none, iso_to_dt, validate_objectid
+from utils import strip_none, iso_to_dt, validate_objectid, check_exists
 
 bp = Blueprint("patients", __name__)
 
@@ -154,4 +154,61 @@ def create():
         return {"error": "validation_mongo", "details": getattr(we, "details", {}) or {}}, 400
 
     return {"_id": str(ins.inserted_id)}, 201
+
+
+# -----------------------------------------------------------
+# Route PATCH /api/patients/<id> — mise à jour partielle
+# -----------------------------------------------------------
+@bp.patch("/<id>")
+def update(id):
+    try:
+        oid = validate_objectid(id)
+        check_exists("patients", oid, "Patient")
+    except (ValueError, FileNotFoundError) as e:
+        return {"error": str(e)}, 400
+
+    b = request.get_json(force=True) or {}
+    update_doc = {}
+    
+    for f in ("email", "notes", "allergies", "chronic_diseases"):
+        if f in b: update_doc[f] = b[f]
+
+    if "identite" in b and isinstance(b["identite"], dict):
+        for f in ("prenom", "nom", "date_naissance", "sexe"):
+            if f in b["identite"]:
+                key = f"identite.{f}"
+                if f == "date_naissance":
+                    update_doc[key] = iso_to_dt(b["identite"][f])
+                else:
+                    update_doc[key] = b["identite"][f]
+
+    if not update_doc:
+        return {"error": "Aucun champ à mettre à jour"}, 400
+
+    update_doc["updated_at"] = datetime.now(timezone.utc)
+
+    res = current_app.db.patients.find_one_and_update(
+        {"_id": oid},
+        {"$set": update_doc},
+        return_document=ReturnDocument.AFTER
+    )
+    return res, 200
+
+
+# -----------------------------------------------------------
+# Route DELETE /api/patients/<id> — suppression (soft)
+# -----------------------------------------------------------
+@bp.delete("/<id>")
+def delete(id):
+    try:
+        oid = validate_objectid(id)
+        check_exists("patients", oid, "Patient")
+    except (ValueError, FileNotFoundError) as e:
+        return {"error": str(e)}, 400
+
+    current_app.db.patients.update_one(
+        {"_id": oid},
+        {"$set": {"deleted": True, "updated_at": datetime.now(timezone.utc)}}
+    )
+    return "", 204
 

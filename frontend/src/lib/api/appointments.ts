@@ -1,5 +1,5 @@
 import { http } from '../http'
-import { scrub } from '../clean' 
+import { scrub } from '../clean'
 
 // ---- Types alignés sur ton backend ----
 
@@ -39,6 +39,8 @@ export type NewAppointment = {
   reason?: string
   notes?: string
 }
+
+export type UpdateAppointment = Partial<NewAppointment>
 
 // Aide: forcer un ISO avec 'Z' en UTC depuis Date ou string local
 export function toISOZ(d: Date | string) {
@@ -99,5 +101,18 @@ export const appointments = {
     })
     return appointments.getById(created._id)
   },
-  
+
+  // Mise à jour (PATCH)
+  update: (id: string, body: UpdateAppointment) =>
+    http<Appointment>(`/api/appointments/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(scrub(body)),
+    }),
+
+  // Suppression (DELETE)
+  delete: (id: string) =>
+    http<void>(`/api/appointments/${id}`, {
+      method: 'DELETE',
+    }),
+
 }

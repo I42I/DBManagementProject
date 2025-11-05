@@ -59,4 +59,15 @@ export const doctors = {
     const created = await doctors.create(body)
     return doctors.getById(created._id)
   },
+
+  update: (id: string, body: Partial<DoctorFull>) =>
+    http<DoctorFull>(`/api/doctors/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(scrub(body)),
+    }),
+
+  delete: (id: string) =>
+    http<void>(`/api/doctors/${id}`, {
+      method: 'DELETE',
+    }),
 }

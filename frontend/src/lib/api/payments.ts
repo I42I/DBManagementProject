@@ -2,7 +2,7 @@ import { http } from '../http'
 
 export type Currency = 'XAF' | 'XOF' | 'EUR' | 'USD'
 export type PayMethod = 'cash' | 'card' | 'mobile' | 'insurance'
-export type PayStatus  = 'pending' | 'paid' | 'failed' | 'refunded' | 'cancelled'
+export type PayStatus = 'pending' | 'paid' | 'failed' | 'refunded' | 'cancelled'
 export type ItemRefType = 'appointment' | 'consultation' | 'laboratory' | 'pharmacy' | 'other'
 
 export type PaymentItem = {
@@ -60,4 +60,7 @@ export const payments = {
   getById: (id: string) => http<Payment>(`/api/payments/${id}`),
   create: (body: NewPayment) =>
     http<{ _id: string }>(`/api/payments`, { method: 'POST', body: JSON.stringify(body) }),
+  update: (id: string, body: Partial<NewPayment>) =>
+    http<Payment>(`/api/payments/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  delete: (id: string) => http<void>(`/api/payments/${id}`, { method: 'DELETE' }),
 }

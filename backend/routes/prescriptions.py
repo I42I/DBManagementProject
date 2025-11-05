@@ -213,3 +213,68 @@ def get_one(id):
         return {"error": "id invalide"}, 400
     d = current_app.db.prescriptions.find_one({"_id": oid})
     return (d, 200) if d else ({"error": "introuvable"}, 404)
+
+
+# -----------------------------------------------------------
+# PATCH /api/prescriptions/<id> — mise à jour partielle
+# -----------------------------------------------------------
+@bp.patch("/<id>")
+def update(id):
+    try:
+        oid = validate_objectid(id)
+        check_exists("prescriptions", oid, "Prescription")
+    except (ValueError, FileNotFoundError) as e:
+        return {"error": str(e)}, 400
+
+    b = request.get_json(force=True) or {}
+    update_doc = {}
+
+    if "items" in b:
+        if not isinstance(b["items"], list) or not b["items"]:
+            return {"error": "items doit être un tableau non vide"}, 400
+        for it in b["items"]:
+            if not it.get("dci") or not it.get("posologie"):
+                return {"error": "Chaque item doit avoir 'dci' et 'posologie'"}, 400
+        update_doc["items"] = _normalize_items(b["items"])
+
+    if "notes" in b:
+        update_doc["notes"] = b["notes"]
+
+    if "renouvellements" in b:
+        try:
+            renouvel = int(b["renouvellements"])
+            if renouvel < 0:
+                raise ValueError()
+            update_doc["renouvellements"] = renouvel
+        except (ValueError, TypeError):
+            return {"error": "renouvellements doit être un entier positif"}, 400
+
+    if not update_doc:
+        return {"error": "Aucun champ à mettre à jour"}, 400
+
+    update_doc["updated_at"] = datetime.now(timezone.utc)
+
+    res = current_app.db.prescriptions.find_one_and_update(
+        {"_id": oid},
+        {"$set": update_doc},
+        return_document=True
+    )
+    return res, 200
+
+
+# -----------------------------------------------------------
+# DELETE /api/prescriptions/<id> — suppression (soft)
+# -----------------------------------------------------------
+@bp.delete("/<id>")
+def delete(id):
+    try:
+        oid = validate_objectid(id)
+        check_exists("prescriptions", oid, "Prescription")
+    except (ValueError, FileNotFoundError) as e:
+        return {"error": str(e)}, 400
+
+    current_app.db.prescriptions.update_one(
+        {"_id": oid},
+        {"$set": {"deleted": True, "updated_at": datetime.now(timezone.utc)}}
+    )
+    return "", 204

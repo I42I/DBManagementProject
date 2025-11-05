@@ -16,6 +16,7 @@ from bson import ObjectId
 from bson.errors import InvalidId
 from pymongo.errors import WriteError
 from datetime import datetime, timezone
+from utils import strip_none, iso_to_dt, validate_objectid, check_exists
 
 bp = Blueprint("laboratories", __name__)
 
@@ -23,14 +24,6 @@ bp = Blueprint("laboratories", __name__)
 # Statuts autorisés pour le champ "status"
 # -----------------------------------------------------------
 _ALLOWED_STATUS = {"ordered", "in_progress", "completed", "cancelled"}
-
-
-# -----------------------------------------------------------
-# Utils : suppression des clés None (évite null dans Mongo)
-# -----------------------------------------------------------
-def _strip_none(d: dict):
-    """Supprime les clés dont la valeur est None (évite d’écrire null)."""
-    return {k: v for k, v in d.items() if v is not None}
 
 
 # -----------------------------------------------------------
@@ -111,7 +104,7 @@ def create():
         except InvalidId:
             return {"error": "facility_id doit être un ObjectId"}, 400
     else:
-        fid = ObjectId()  # généré automatiquement
+        fid = ObjectId()
 
     #  appointment_id optionnel
     ap_id = None
@@ -231,4 +224,64 @@ def get_one(id):
         return {"error": "id invalide"}, 400
     d = current_app.db.laboratories.find_one({"_id": oid})
     return (d, 200) if d else ({"error": "introuvable"}, 404)
+
+
+# -----------------------------------------------------------
+# PATCH /api/laboratories/<id> — mise à jour partielle
+# -----------------------------------------------------------
+@bp.patch("/<id>")
+def update(id):
+    try:
+        oid = validate_objectid(id)
+        check_exists("laboratories", oid, "Analyse de laboratoire")
+    except (ValueError, FileNotFoundError) as e:
+        return {"error": str(e)}, 400
+
+    b = request.get_json(force=True) or {}
+    update_doc = {}
+
+    if "status" in b:
+        if b["status"] not in _ALLOWED_STATUS:
+            return {"error": "Status invalide"}, 400
+        update_doc["status"] = b["status"]
+        if b["status"] == "completed":
+            update_doc["date_reported"] = datetime.now(timezone.utc)
+
+    if "notes" in b:
+        update_doc["notes"] = b["notes"]
+
+    if "tests" in b:
+        if not isinstance(b["tests"], list):
+            return {"error": "tests doit être un tableau"}, 400
+        update_doc["tests"] = b["tests"]
+
+    if not update_doc:
+        return {"error": "Aucun champ à mettre à jour"}, 400
+
+    update_doc["updated_at"] = datetime.now(timezone.utc)
+
+    res = current_app.db.laboratories.find_one_and_update(
+        {"_id": oid},
+        {"$set": update_doc},
+        return_document=True
+    )
+    return res, 200
+
+
+# -----------------------------------------------------------
+# DELETE /api/laboratories/<id> — suppression (soft)
+# -----------------------------------------------------------
+@bp.delete("/<id>")
+def delete(id):
+    try:
+        oid = validate_objectid(id)
+        check_exists("laboratories", oid, "Analyse de laboratoire")
+    except (ValueError, FileNotFoundError) as e:
+        return {"error": str(e)}, 400
+
+    current_app.db.laboratories.update_one(
+        {"_id": oid},
+        {"$set": {"deleted": True, "updated_at": datetime.now(timezone.utc)}}
+    )
+    return "", 204
 

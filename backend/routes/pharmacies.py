@@ -212,3 +212,61 @@ def get_one(id):
     d = current_app.db.pharmacies.find_one({"_id": oid})
     return (d, 200) if d else ({"error": "introuvable"}, 404)
 
+
+# -----------------------------------------------------------
+# PATCH /api/pharmacies/<id> — mise à jour partielle
+# -----------------------------------------------------------
+@bp.patch("/<id>")
+def update(id):
+    try:
+        oid = validate_objectid(id)
+        check_exists("pharmacies", oid, "Délivrance de pharmacie")
+    except (ValueError, FileNotFoundError) as e:
+        return {"error": str(e)}, 400
+
+    b = request.get_json(force=True) or {}
+    update_doc = {}
+
+    if "status" in b:
+        if b["status"] not in _ALLOWED_STATUS:
+            return {"error": "Status invalide"}, 400
+        update_doc["status"] = b["status"]
+        if b["status"] == "dispensed":
+            update_doc["dispensed_at"] = datetime.now(timezone.utc)
+
+    if "items" in b:
+        items = _normalize_items(b["items"])
+        if not items:
+            return {"error": "items invalides"}, 400
+        update_doc["items"] = items
+
+    if not update_doc:
+        return {"error": "Aucun champ à mettre à jour"}, 400
+
+    update_doc["updated_at"] = datetime.now(timezone.utc)
+
+    res = current_app.db.pharmacies.find_one_and_update(
+        {"_id": oid},
+        {"$set": update_doc},
+        return_document=True
+    )
+    return res, 200
+
+
+# -----------------------------------------------------------
+# DELETE /api/pharmacies/<id> — suppression (soft)
+# -----------------------------------------------------------
+@bp.delete("/<id>")
+def delete(id):
+    try:
+        oid = validate_objectid(id)
+        check_exists("pharmacies", oid, "Délivrance de pharmacie")
+    except (ValueError, FileNotFoundError) as e:
+        return {"error": str(e)}, 400
+
+    current_app.db.pharmacies.update_one(
+        {"_id": oid},
+        {"$set": {"deleted": True, "updated_at": datetime.now(timezone.utc)}}
+    )
+    return "", 204
+

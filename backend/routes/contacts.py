@@ -14,9 +14,8 @@
 from flask import Blueprint, request
 from datetime import datetime
 
-# On crée un "blueprint" pour ce module.
-# Il sera monté dans app.py avec : app.register_blueprint(contacts.bp, url_prefix="/api/contacts")
 bp = Blueprint("contacts", __name__)
+
 
 # -------------------------------
 # POST /api/contacts — réception d’un message
@@ -36,14 +35,11 @@ def create():
     """
     b = request.get_json(force=True) or {}
 
-    # Validation basique des 3 champs requis
     for f in ("name", "email", "message"):
         if not b.get(f):
             return {"error": f"{f} requis"}, 400
 
-    # Log du message en console (remplaçable plus tard par envoi email / DB)
     print("[CONTACT]", datetime.utcnow().isoformat(), b)
 
-    # Réponse standard
     return {"ok": True}, 200
 

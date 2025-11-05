@@ -95,3 +95,58 @@ def get_one(id):
         return {"error": str(e)}, 400
     d = current_app.db.consultations.find_one({"_id": oid})
     return (d, 200) if d else ({"error": "introuvable"}, 404)
+
+
+# -----------------------------------------------------------
+# PATCH /api/consultations/<id> — mise à jour partielle
+# -----------------------------------------------------------
+@bp.patch("/<id>")
+def update(id):
+    try:
+        oid = validate_objectid(id)
+        check_exists("consultations", oid, "Consultation")
+    except (ValueError, FileNotFoundError) as e:
+        return {"error": str(e)}, 400
+
+    b = request.get_json(force=True) or {}
+    update_doc = {}
+    
+    for f in ("symptomes", "diagnostic", "notes", "vital_signs", "attachments"):
+        if f in b:
+            update_doc[f] = b[f]
+
+    if "date_time" in b:
+        dt = iso_to_dt(b["date_time"])
+        if not dt:
+            return {"error": "date_time invalide"}, 400
+        update_doc["date_time"] = dt
+
+    if not update_doc:
+        return {"error": "Aucun champ à mettre à jour"}, 400
+
+    update_doc["updated_at"] = datetime.utcnow()
+
+    res = current_app.db.consultations.find_one_and_update(
+        {"_id": oid},
+        {"$set": strip_none(update_doc)},
+        return_document=True
+    )
+    return res, 200
+
+
+# -----------------------------------------------------------
+# DELETE /api/consultations/<id> — suppression (soft)
+# -----------------------------------------------------------
+@bp.delete("/<id>")
+def delete(id):
+    try:
+        oid = validate_objectid(id)
+        check_exists("consultations", oid, "Consultation")
+    except (ValueError, FileNotFoundError) as e:
+        return {"error": str(e)}, 400
+
+    current_app.db.consultations.update_one(
+        {"_id": oid},
+        {"$set": {"deleted": True, "updated_at": datetime.utcnow()}}
+    )
+    return "", 204

@@ -96,3 +96,62 @@ def get_one(id):
         return {"error": str(e)}, 400
     doc = current_app.db.appointments.find_one({"_id": oid})
     return (doc, 200) if doc else ({"error": "introuvable"}, 404)
+
+
+# -----------------------------------------------------------
+# Route PATCH /api/appointments/<id> — mise à jour partielle
+# -----------------------------------------------------------
+@bp.patch("/<id>")
+def update(id):
+    try:
+        oid = validate_objectid(id)
+        check_exists("appointments", oid, "Rendez-vous")
+    except (ValueError, FileNotFoundError) as e:
+        return {"error": str(e)}, 400
+
+    b = request.get_json(force=True) or {}
+    update_doc = {}
+
+    if "status" in b:
+        if b["status"] not in _ALLOWED_STATUS:
+            return {"error": "status invalide"}, 400
+        update_doc["status"] = b["status"]
+    
+    if "date_time" in b:
+        dt = iso_to_dt(b["date_time"])
+        if not dt:
+            return {"error": "date_time invalide"}, 400
+        update_doc["date_time"] = dt
+
+    if "reason" in b: update_doc["reason"] = b["reason"]
+    if "notes" in b: update_doc["notes"] = b["notes"]
+
+    if not update_doc:
+        return {"error": "Aucun champ à mettre à jour"}, 400
+
+    update_doc["updated_at"] = datetime.utcnow()
+
+    res = current_app.db.appointments.find_one_and_update(
+        {"_id": oid},
+        {"$set": update_doc},
+        return_document=True
+    )
+    return res, 200
+
+
+# -----------------------------------------------------------
+# Route DELETE /api/appointments/<id> — suppression (soft)
+# -----------------------------------------------------------
+@bp.delete("/<id>")
+def delete(id):
+    try:
+        oid = validate_objectid(id)
+        check_exists("appointments", oid, "Rendez-vous")
+    except (ValueError, FileNotFoundError) as e:
+        return {"error": str(e)}, 400
+
+    current_app.db.appointments.update_one(
+        {"_id": oid},
+        {"$set": {"deleted": True, "updated_at": datetime.utcnow()}}
+    )
+    return "", 204

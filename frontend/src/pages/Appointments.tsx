@@ -25,8 +25,8 @@ export default function Appointments() {
     setErr(null)
     try {
       const day = new Date(dayISO)
-      const start = new Date(day); start.setHours(0,0,0,0)
-      const end   = new Date(day); end.setHours(23,59,59,999)
+      const start = new Date(day); start.setHours(0, 0, 0, 0)
+      const end = new Date(day); end.setHours(23, 59, 59, 999)
       const data = await appointments.list({
         date_from: toISOZ(start),
         date_to: toISOZ(end),
@@ -36,6 +36,28 @@ export default function Appointments() {
       setErr(e.message || 'Erreur lors du chargement')
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleCancel(id: string) {
+    if (!window.confirm('Voulez-vous vraiment annuler ce rendez-vous ?')) return
+    try {
+      await appointments.update(id, { status: 'cancelled' })
+      setToast('Rendez-vous annulé.')
+      loadForDay(date) // Rafraîchir la liste
+    } catch (e: any) {
+      setErr(e.message || 'Erreur lors de l’annulation')
+    }
+  }
+
+  async function handleDelete(id: string) {
+    if (!window.confirm('Voulez-vous vraiment supprimer ce rendez-vous ? Cette action est irréversible.')) return
+    try {
+      await appointments.delete(id)
+      setToast('Rendez-vous supprimé.')
+      loadForDay(date) // Rafraîchir la liste
+    } catch (e: any) {
+      setErr(e.message || 'Erreur lors de la suppression')
     }
   }
 
@@ -93,12 +115,13 @@ export default function Appointments() {
                 <th>Heure</th>
                 <th>Statut</th>
                 <th>Motif</th>
+                <th className="text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {results.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="py-6 text-center text-gray-500">
+                  <td colSpan={5} className="py-6 text-center text-gray-500">
                     Aucun rendez-vous ce jour.
                   </td>
                 </tr>
@@ -113,6 +136,21 @@ export default function Appointments() {
                     <td>{new Date(a.date_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
                     <td>{a.status}</td>
                     <td>{a.reason ?? '—'}</td>
+                    <td className="text-right space-x-2">
+                      <button
+                        onClick={() => handleCancel(a._id)}
+                        className="text-xs text-amber-600 hover:underline disabled:opacity-50"
+                        disabled={a.status === 'cancelled' || a.status === 'completed'}
+                      >
+                        Annuler
+                      </button>
+                      <button
+                        onClick={() => handleDelete(a._id)}
+                        className="text-xs text-red-600 hover:underline"
+                      >
+                        Supprimer
+                      </button>
+                    </td>
                   </tr>
                 ))
               )}

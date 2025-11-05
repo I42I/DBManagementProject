@@ -200,3 +200,63 @@ def get_one(id):
         return {"error": "id invalide"}, 400
     d = current_app.db.payments.find_one({"_id": oid})
     return (d, 200) if d else ({"error": "introuvable"}, 404)
+
+
+# -----------------------------------------------------------
+# PATCH /api/payments/<id> — mise à jour partielle
+# -----------------------------------------------------------
+@bp.patch("/<id>")
+def update(id):
+    try:
+        oid = validate_objectid(id)
+        check_exists("payments", oid, "Paiement")
+    except (ValueError, FileNotFoundError) as e:
+        return {"error": str(e)}, 400
+
+    b = request.get_json(force=True) or {}
+    update_doc = {}
+
+    if "status" in b:
+        if b["status"] not in _ALLOWED_STATUS:
+            return {"error": "Status invalide"}, 400
+        update_doc["status"] = b["status"]
+        if b["status"] == "paid":
+            update_doc["paid_at"] = datetime.now(timezone.utc)
+
+    if "method" in b:
+        if b["method"] not in _ALLOWED_METHOD:
+            return {"error": "Méthode de paiement invalide"}, 400
+        update_doc["method"] = b["method"]
+
+    if "notes" in b:
+        update_doc["notes"] = b["notes"]
+
+    if not update_doc:
+        return {"error": "Aucun champ à mettre à jour"}, 400
+
+    update_doc["updated_at"] = datetime.now(timezone.utc)
+
+    res = current_app.db.payments.find_one_and_update(
+        {"_id": oid},
+        {"$set": update_doc},
+        return_document=True
+    )
+    return res, 200
+
+
+# -----------------------------------------------------------
+# DELETE /api/payments/<id> — suppression (soft)
+# -----------------------------------------------------------
+@bp.delete("/<id>")
+def delete(id):
+    try:
+        oid = validate_objectid(id)
+        check_exists("payments", oid, "Paiement")
+    except (ValueError, FileNotFoundError) as e:
+        return {"error": str(e)}, 400
+
+    current_app.db.payments.update_one(
+        {"_id": oid},
+        {"$set": {"status": "cancelled", "updated_at": datetime.now(timezone.utc)}}
+    )
+    return "", 204

@@ -51,4 +51,7 @@ export const laboratories = {
   getById: (id: string) => http<Laboratory>(`/api/laboratories/${id}`),
   create: (body: NewLaboratory) =>
     http<{ _id: string }>(`/api/laboratories`, { method: 'POST', body: JSON.stringify(body) }),
+  update: (id: string, body: Partial<NewLaboratory>) =>
+    http<Laboratory>(`/api/laboratories/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  delete: (id: string) => http<void>(`/api/laboratories/${id}`, { method: 'DELETE' }),
 }

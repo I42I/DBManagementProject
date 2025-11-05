@@ -120,7 +120,7 @@ def create():
         except InvalidId:
             return jsonify(error="facility_id doit être un ObjectId"), 400
     else:
-        b["facility_id"] = ObjectId()  # génération automatique (mock facility)
+        b["facility_id"] = ObjectId()
 
     # Normalisation des chaînes
     b["identite"]["prenom"] = b["identite"]["prenom"].strip().capitalize()
@@ -144,3 +144,52 @@ def create():
         return jsonify(error="validation_mongo", details=details), 400
 
     return jsonify(_id=str(ins.inserted_id)), 201
+
+
+# -----------------------------------------------------------
+# Route PATCH /api/doctors/<id> — mise à jour partielle
+# -----------------------------------------------------------
+@bp.patch("/<id>")
+def update(id):
+    try:
+        oid = validate_objectid(id)
+        check_exists("doctors", oid, "Médecin")
+    except (ValueError, FileNotFoundError) as e:
+        return {"error": str(e)}, 400
+
+    b = request.get_json(force=True) or {}
+    update_doc = {}
+    
+    if "specialites" in b: update_doc["specialites"] = b["specialites"]
+    if "licence" in b: update_doc["licence"] = b["licence"]
+    if "facility_id" in b: update_doc["facility_id"] = validate_objectid(b["facility_id"])
+
+    if not update_doc:
+        return {"error": "Aucun champ à mettre à jour"}, 400
+
+    update_doc["updated_at"] = datetime.now(timezone.utc)
+
+    res = current_app.db.doctors.find_one_and_update(
+        {"_id": oid},
+        {"$set": update_doc},
+        return_document=ReturnDocument.AFTER
+    )
+    return res, 200
+
+
+# -----------------------------------------------------------
+# Route DELETE /api/doctors/<id> — suppression (soft)
+# -----------------------------------------------------------
+@bp.delete("/<id>")
+def delete(id):
+    try:
+        oid = validate_objectid(id)
+        check_exists("doctors", oid, "Médecin")
+    except (ValueError, FileNotFoundError) as e:
+        return {"error": str(e)}, 400
+
+    current_app.db.doctors.update_one(
+        {"_id": oid},
+        {"$set": {"deleted": True, "updated_at": datetime.now(timezone.utc)}}
+    )
+    return "", 204

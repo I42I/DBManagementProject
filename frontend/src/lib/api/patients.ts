@@ -18,7 +18,9 @@ export type PatientListItem = {
 }
 
 export type PatientFull = PatientListItem & {
-  // ajoute ici d'autres champs détaillés si besoin
+  notes?: string
+  allergies?: string[]
+  chronic_diseases?: string[]
 }
 
 export type NewPatient = {
@@ -67,5 +69,17 @@ export const patients = {
     const created = await patients.create(body)
     return patients.getById(created._id)
   },
+
+  update: (id: string, body: Partial<PatientFull>) =>
+    http<PatientFull>(`/api/patients/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(scrub(body)),
+    }),
+
+  // Suppression (DELETE)
+  delete: (id: string) =>
+    http<void>(`/api/patients/${id}`, {
+      method: 'DELETE',
+    }),
 }
 

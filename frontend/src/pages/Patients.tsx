@@ -26,9 +26,11 @@ function formatName(p: PatientListItem) {
 
 export default function Patients() {
   // --- liste ---
+  const [results, setResults] = useState<PatientListItem[]>([])
   const [list, setList] = useState<PatientListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [query, setQuery] = useState('')
 
   // --- form ajout rapide (dev) ---
   const [prenom, setPrenom] = useState('')
@@ -48,6 +50,16 @@ export default function Patients() {
       setError(e.message ?? 'Erreur de chargement')
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleDelete(id: string, name: string) {
+    if (!window.confirm(`Voulez-vous vraiment supprimer le patient ${name} ?`)) return
+    try {
+      await patients.delete(id)
+      load(query) // Rafraîchir la liste
+    } catch (e: any) {
+      setErr(e.message || 'Erreur lors de la suppression')
     }
   }
 
@@ -173,13 +185,16 @@ export default function Patients() {
                 ) : list.map(p => (
                   <tr key={p._id} className="border-t">
                     <td className="py-2">{formatName(p)}</td>
-                    <td>
-                      {p.identite?.date_naissance
-                        ? new Date(p.identite.date_naissance).toLocaleDateString()
-                        : '—'}
+                    <td>{p.identite.sexe}</td>
+                    <td>{p.identite.date_naissance?.split('T')[0]}</td>
+                    <td className="text-right">
+                      <button
+                        onClick={() => handleDelete(p._id, formatName(p))}
+                        className="text-xs text-red-600 hover:underline"
+                      >
+                        Supprimer
+                      </button>
                     </td>
-                    <td>{p.identite?.sexe ?? '—'}</td>
-                    <td>{p.contacts?.phone ?? '—'}</td>
                   </tr>
                 ))}
               </tbody>
