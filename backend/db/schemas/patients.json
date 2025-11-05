@@ -1,0 +1,78 @@
+{
+  "bsonType": "object",
+  "required": [
+    "identite",
+    "facility_id",
+    "created_at"
+  ],
+  "properties": {
+    "facility_id": {
+      "bsonType": "objectId"
+    },
+    "identite": {
+      "bsonType": "object",
+      "required": [
+        "prenom",
+        "nom",
+        "date_naissance",
+        "sexe"
+      ],
+      "properties": {
+        "prenom": {
+          "bsonType": "string"
+        },
+        "nom": {
+          "bsonType": "string"
+        },
+        "date_naissance": {
+          "bsonType": "date"
+        },
+        "sexe": {
+          "enum": [
+            "M",
+            "F",
+            "X"
+          ]
+        },
+        "national_id": {
+          "bsonType": "string"
+        }
+      }
+    },
+    "contacts": {
+      "bsonType": "object",
+      "properties": {
+        "phone": {
+          "bsonType": "string"
+        },
+        "email": {
+          "bsonType": "string"
+        },
+        "adresse": {
+          "bsonType": "string"
+        }
+      }
+    },
+    "allergies": {
+      "bsonType": "array",
+      "items": {
+        "bsonType": "string"
+      }
+    },
+    "maladies_chroniques": {
+      "bsonType": "array",
+      "items": {
+        "bsonType": "string"
+      }
+    },
+    "created_at": {
+      "bsonType": "date"
+    },
+    "updated_at": {
+      "bsonType": "date"
+    },
+    "deleted": {
+      "bsonType": "bool"
+    }
+  }
+}

@@ -1,0 +1,26 @@
+[
+  {
+    "key": {
+      "facility_id": 1,
+      "report_type": 1,
+      "period_start": 1,
+      "period_end": 1
+    },
+    "name": "by_facility_type_period"
+  },
+  {
+    "key": {
+      "status": 1,
+      "submitted_at": -1
+    },
+    "name": "by_status_submitted"
+  },
+  {
+    "key": {
+      "external_ref": 1
+    },
+    "name": "uniq_external_ref",
+    "unique": true,
+    "sparse": true
+  }
+]

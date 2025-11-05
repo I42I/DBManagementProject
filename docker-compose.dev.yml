@@ -1,0 +1,52 @@
+services:
+  mongo:
+    image: mongo:6
+    container_name: mongo-dev
+    ports: ["27017:27017"]
+    volumes: ["mongo-data-dev:/data/db"]
+    restart: unless-stopped
+
+  mongo-express:
+    image: mongo-express:1
+    container_name: mongo-express-dev
+    ports: ["8081:8081"]
+    environment:
+      - ME_CONFIG_MONGODB_URL=mongodb://mongo:27017
+      - ME_CONFIG_BASICAUTH_USERNAME=admin
+      - ME_CONFIG_BASICAUTH_PASSWORD=secret
+    depends_on:
+      - mongo
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      target: backend
+    container_name: chad-backend-dev
+    ports: ["5000:5000"]
+    environment:
+      - MONGO_URI=mongodb://mongo:27017
+      - MONGO_DB=hospital_dev
+      - SEED_ON_START=true
+      - FLASK_DEBUG=1
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - mongo
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      target: frontend
+    container_name: chad-frontend-dev
+    ports: ["5173:5173"]
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    restart: unless-stopped
+
+volumes:
+  mongo-data-dev:
