@@ -1,6 +1,31 @@
 [
-  { "key": { "patient_id": 1, "created_at": -1 }, "name": "by_patient_created_desc" },
-  { "key": { "status": 1, "created_at": -1 }, "name": "by_status_created" },
-  { "key": { "invoice_no": 1 }, "name": "uniq_invoice", "unique": true, "sparse": true },
-  { "key": { "method": 1, "created_at": -1 }, "name": "by_method_created" }
+  {
+    "key": {
+      "patient_id": 1,
+      "created_at": -1
+    },
+    "name": "by_patient_created_desc"
+  },
+  {
+    "key": {
+      "status": 1,
+      "created_at": -1
+    },
+    "name": "by_status_created"
+  },
+  {
+    "key": {
+      "invoice_no": 1
+    },
+    "name": "uniq_invoice",
+    "unique": true,
+    "sparse": true
+  },
+  {
+    "key": {
+      "method": 1,
+      "created_at": -1
+    },
+    "name": "by_method_created"
+  }
 ]

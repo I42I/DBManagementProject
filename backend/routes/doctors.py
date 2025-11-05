@@ -19,15 +19,10 @@ from bson import ObjectId
 from bson.errors import InvalidId
 from pymongo.errors import WriteError
 from datetime import datetime, timezone
+from utils import strip_none, iso_to_dt, validate_objectid
 
 bp = Blueprint("doctors", __name__)
 
-# -------------------------------
-# Helpers
-# -------------------------------
-def _strip_none(d: dict):
-    """Supprime les paires clé=None (utile avant insertion Mongo)."""
-    return {k: v for k, v in d.items() if v is not None}
 
 # -------------------------------
 # Validation d'entrée
@@ -139,7 +134,7 @@ def create():
     b["deleted"] = False
 
     # Nettoyage des None
-    doc = _strip_none(b)
+    doc = strip_none(b)
 
     # Insertion Mongo
     try:

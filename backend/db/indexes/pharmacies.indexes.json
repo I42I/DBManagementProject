@@ -1,6 +1,29 @@
 [
-  { "key": { "patient_id": 1, "created_at": -1 }, "name": "by_patient_created_desc" },
-  { "key": { "doctor_id": 1,  "created_at": -1 }, "name": "by_doctor_created_desc" },
-  { "key": { "prescription_id": 1 }, "name": "by_prescription" },
-  { "key": { "status": 1, "created_at": -1 }, "name": "by_status_created" }
+  {
+    "key": {
+      "patient_id": 1,
+      "created_at": -1
+    },
+    "name": "by_patient_created_desc"
+  },
+  {
+    "key": {
+      "doctor_id": 1,
+      "created_at": -1
+    },
+    "name": "by_doctor_created_desc"
+  },
+  {
+    "key": {
+      "prescription_id": 1
+    },
+    "name": "by_prescription"
+  },
+  {
+    "key": {
+      "status": 1,
+      "created_at": -1
+    },
+    "name": "by_status_created"
+  }
 ]

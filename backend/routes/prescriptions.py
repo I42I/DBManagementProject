@@ -16,26 +16,11 @@ from bson import ObjectId
 from bson.errors import InvalidId
 from pymongo.errors import WriteError
 from datetime import datetime, timezone
+from utils import strip_none, iso_to_dt, validate_objectid, check_exists
+
 
 bp = Blueprint("prescriptions", __name__)
 
-# -------------------------------
-# Helpers génériques
-# -------------------------------
-def _strip_none(d: dict) -> dict:
-    """Supprime les clés dont la valeur est None (évite d'écrire null)."""
-    return {k: v for k, v in d.items() if v is not None}
-
-def _to_dt(s: str):
-    """Chaîne ISO8601 -> datetime avec tz UTC (pour les filtres)."""
-    if not isinstance(s, str):
-        return None
-    try:
-        s = s.replace("Z", "+00:00") if s.endswith("Z") else s
-        dt = datetime.fromisoformat(s)
-        return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
-    except Exception:
-        return None
 
 # -------------------------------
 # Validation d'entrée
@@ -100,7 +85,7 @@ def _normalize_items(items_in):
             "contre_indications": it.get("contre_indications").strip()
                 if isinstance(it.get("contre_indications"), str) else it.get("contre_indications"),
         }
-        out.append(_strip_none(item))
+        out.append(strip_none(item))
     return out
 
 # -------------------------------
@@ -168,7 +153,7 @@ def create():
         doc["facility_id"] = fid
 
     # 8) Suppression des None
-    doc = _strip_none(doc)
+    doc = strip_none(doc)
 
     # 9) Insertion
     try:
@@ -205,11 +190,11 @@ def list_():
     if date_from or date_to:
         rng = {}
         if date_from:
-            df = _to_dt(date_from)
+            df = iso_to_dt(date_from)
             if not df: return {"error": "date_from doit être ISO 8601"}, 400
             rng["$gte"] = df
         if date_to:
-            dt_ = _to_dt(date_to)
+            dt_ = iso_to_dt(date_to)
             if not dt_: return {"error": "date_to doit être ISO 8601"}, 400
             rng["$lte"] = dt_
         q["created_at"] = rng

@@ -1,7 +1,37 @@
 [
-  { "key": { "to_patient_id": 1, "created_at": -1 }, "name": "by_patient_created_desc" },
-  { "key": { "to_doctor_id": 1,  "created_at": -1 }, "name": "by_doctor_created_desc" },
-  { "key": { "status": 1, "send_at": 1 }, "name": "by_status_send_at" },
-  { "key": { "channel": 1, "status": 1 }, "name": "by_channel_status" },
-  { "key": { "ref_type": 1, "ref_id": 1 }, "name": "by_ref" }
+  {
+    "key": {
+      "to_patient_id": 1,
+      "created_at": -1
+    },
+    "name": "by_patient_created_desc"
+  },
+  {
+    "key": {
+      "to_doctor_id": 1,
+      "created_at": -1
+    },
+    "name": "by_doctor_created_desc"
+  },
+  {
+    "key": {
+      "status": 1,
+      "send_at": 1
+    },
+    "name": "by_status_send_at"
+  },
+  {
+    "key": {
+      "channel": 1,
+      "status": 1
+    },
+    "name": "by_channel_status"
+  },
+  {
+    "key": {
+      "ref_type": 1,
+      "ref_id": 1
+    },
+    "name": "by_ref"
+  }
 ]

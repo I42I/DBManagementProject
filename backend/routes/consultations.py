@@ -12,43 +12,12 @@
 # ===========================================================
 
 from flask import Blueprint, request, current_app
+from datetime import datetime
 from bson import ObjectId
-from bson.errors import InvalidId
-from pymongo.errors import WriteError
-from datetime import datetime, timezone
+from utils import strip_none, iso_to_dt, validate_objectid, check_exists
 
 bp = Blueprint("consultations", __name__)
 
-# -----------------------------------------------------------
-# Utils : conversion ISO8601 → datetime(UTC)
-# -----------------------------------------------------------
-def _iso_to_dt(s: str):
-    """Convertit une chaîne ISO8601 (avec/sans 'Z') en datetime UTC."""
-    try:
-        s = s.replace("Z", "+00:00") if isinstance(s, str) and s.endswith("Z") else s
-        dt = datetime.fromisoformat(s) if isinstance(s, str) else s
-        if not isinstance(dt, datetime):
-            return None
-        return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
-    except Exception:
-        return None
-
-# -----------------------------------------------------------
-# Utils : supprimer les clés None (évite d'écrire `null`)
-# -----------------------------------------------------------
-def _strip_none(d: dict) -> dict:
-    return {k: v for k, v in d.items() if v is not None}
-
-# -----------------------------------------------------------
-# Validation "champs obligatoires" + format date
-# -----------------------------------------------------------
-def _validate(b):
-    for f in ["patient_id", "doctor_id", "date_time"]:
-        if f not in b:
-            return f"{f} requis"
-    if isinstance(b.get("date_time"), str) and not _iso_to_dt(b["date_time"]):
-        return "date_time doit être au format ISO 8601"
-    return None
 
 # -----------------------------------------------------------
 # POST /api/consultations — créer une consultation
@@ -56,101 +25,41 @@ def _validate(b):
 @bp.post("")
 def create():
     b = request.get_json(force=True) or {}
-
-    # Validation minimale (présence + date ISO)
-    err = _validate(b)
-    if err:
-        return {"error": err}, 400
-
-    db = current_app.db
-
-    # Cast ObjectId obligatoires
     try:
-        pid = ObjectId(b["patient_id"])
-        did = ObjectId(b["doctor_id"])
-    except InvalidId:
-        return {"error": "patient_id/doctor_id doivent être des ObjectId"}, 400
+        pid = validate_objectid(b.get("patient_id"), "patient_id")
+        did = validate_objectid(b.get("doctor_id"), "doctor_id")
+        dt = iso_to_dt(b.get("date_time"))
+        if not dt:
+            return {"error": "date_time requis et doit être au format ISO 8601"}, 400
 
-    # existence patient/médecin
-    if not db.patients.find_one({"_id": pid}):
-        return {"error": "patient introuvable"}, 404
-    if not db.doctors.find_one({"_id": did}):
-        return {"error": "médecin introuvable"}, 404
+        check_exists("patients", pid, "Patient")
+        check_exists("doctors", did, "Médecin")
 
-    # facility_id (requis par ton schéma) → générer si absent
-    if b.get("facility_id"):
-        try:
-            fid = ObjectId(b["facility_id"])
-        except InvalidId:
-            return {"error": "facility_id doit être un ObjectId"}, 400
-    else:
-        fid = ObjectId()
+        fid = validate_objectid(b.get("facility_id")) if b.get("facility_id") else ObjectId()
+        ap_id = validate_objectid(b.get("appointment_id")) if b.get("appointment_id") else None
+        if ap_id:
+            check_exists("appointments", ap_id, "Rendez-vous")
 
-    #  appointment_id optionnel (et vérification d’existence si fourni)
-    ap_id = None
-    if b.get("appointment_id"):
-        try:
-            ap_id = ObjectId(b["appointment_id"])
-        except InvalidId:
-            return {"error": "appointment_id doit être un ObjectId"}, 400
-        if not db.appointments.find_one({"_id": ap_id}):
-            return {"error": "appointment introuvable"}, 404
+    except (ValueError, FileNotFoundError) as e:
+        return {"error": str(e)}, 400
 
-    # Date/heure de la consultation (UTC)
-    dt = _iso_to_dt(b["date_time"]) if isinstance(b.get("date_time"), str) else (
-        b.get("date_time") or datetime.utcnow().replace(tzinfo=timezone.utc)
-    )
-
-    # Validation "douce" des champs optionnels selon notre validator
-    #   - symptomes / diagnostic / notes : string si présent
-    #   - vital_signs : object/dict si présent
-    #   - attachments : array/list si présent
-    symptomes  = b.get("symptomes")
-    diagnostic = b.get("diagnostic")
-    notes      = b.get("notes")
-    vital      = b.get("vital_signs")
-    attach     = b.get("attachments")
-
-    if symptomes is not None and not isinstance(symptomes, str):
-        return {"error": "symptomes doit être une chaîne si présent"}, 400
-    if diagnostic is not None and not isinstance(diagnostic, str):
-        return {"error": "diagnostic doit être une chaîne si présent"}, 400
-    if notes is not None and not isinstance(notes, str):
-        return {"error": "notes doit être une chaîne si présent"}, 400
-    if vital is not None and not isinstance(vital, dict):
-        return {"error": "vital_signs doit être un objet si présent"}, 400
-    if attach is not None and not isinstance(attach, list):
-        return {"error": "attachments doit être un tableau si présent"}, 400
-
-    # Constitution du document Mongo
-    doc = {
-        "patient_id":  pid,
-        "doctor_id":   did,
+    doc = strip_none({
+        "patient_id": pid,
+        "doctor_id": did,
         "facility_id": fid,
-        "date_time":   dt,
-        "symptomes":   symptomes,
-        "diagnostic":  diagnostic,
-        "notes":       notes,
-        "vital_signs": vital,
-        "attachments": attach,
-        "created_at":  datetime.utcnow(),
-        "updated_at":  datetime.utcnow(),
-        "deleted":     False,
-    }
-    if ap_id:
-        doc["appointment_id"] = ap_id
+        "appointment_id": ap_id,
+        "date_time": dt,
+        "symptomes": b.get("symptomes"),
+        "diagnostic": b.get("diagnostic"),
+        "notes": b.get("notes"),
+        "vital_signs": b.get("vital_signs"),
+        "attachments": b.get("attachments"),
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow(),
+    })
 
-    # Retirer tous les None (évite `null` → validator KO)
-    doc = _strip_none(doc)
-
-    # Insertion
-    try:
-        ins = db.consultations.insert_one(doc)
-    except WriteError as we:
-        details = getattr(we, "details", {}) or {}
-        return {"error": "validation_mongo", "details": details}, 400
-
-    return {"_id": str(ins.inserted_id)}, 201
+    ins = current_app.db.consultations.insert_one(doc)
+    return {"_id": ins.inserted_id}, 201
 
 # -----------------------------------------------------------
 # GET /api/consultations — liste (filtres : patient/doctor/facility + période)
@@ -158,45 +67,22 @@ def create():
 @bp.get("")
 def list_():
     q = {"deleted": {"$ne": True}}
-
-    # Filtres par identifiants
     try:
-        if "patient_id" in request.args:
-            q["patient_id"] = ObjectId(request.args["patient_id"])
-        if "doctor_id" in request.args:
-            q["doctor_id"] = ObjectId(request.args["doctor_id"])
-        if "facility_id" in request.args:
-            q["facility_id"] = ObjectId(request.args["facility_id"])
-    except InvalidId:
-        return {"error": "paramètre id invalide"}, 400
+        if "patient_id" in request.args: q["patient_id"] = validate_objectid(request.args["patient_id"])
+        if "doctor_id" in request.args: q["doctor_id"] = validate_objectid(request.args["doctor_id"])
+        if "facility_id" in request.args: q["facility_id"] = validate_objectid(request.args["facility_id"])
+    except ValueError as e:
+        return {"error": str(e)}, 400
 
-    # Filtres de période (date_from, date_to) — optionnels
-    def _to_dt(s):
-        s = s.replace("Z", "+00:00") if s.endswith("Z") else s
-        try:
-            dt = datetime.fromisoformat(s)
-            return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
-        except Exception:
-            return None
-
-    date_from = request.args.get("date_from")
-    date_to   = request.args.get("date_to")
+    date_from = iso_to_dt(request.args.get("date_from"))
+    date_to = iso_to_dt(request.args.get("date_to"))
     if date_from or date_to:
-        rng = {}
-        if date_from:
-            df = _to_dt(date_from)
-            if not df:
-                return {"error": "date_from doit être ISO 8601"}, 400
-            rng["$gte"] = df
-        if date_to:
-            dt_ = _to_dt(date_to)
-            if not dt_:
-                return {"error": "date_to doit être ISO 8601"}, 400
-            rng["$lte"] = dt_
-        q["date_time"] = rng
+        q["date_time"] = {}
+        if date_from: q["date_time"]["$gte"] = date_from
+        if date_to: q["date_time"]["$lte"] = date_to
 
     cur = current_app.db.consultations.find(q).sort("date_time", -1).limit(200)
-    return [d for d in cur], 200
+    return list(cur)
 
 # -----------------------------------------------------------
 # GET /api/consultations/<id> — détail d'une consultation
@@ -204,8 +90,8 @@ def list_():
 @bp.get("/<id>")
 def get_one(id):
     try:
-        oid = ObjectId(id)
-    except InvalidId:
-        return {"error": "id invalide"}, 400
+        oid = validate_objectid(id)
+    except ValueError as e:
+        return {"error": str(e)}, 400
     d = current_app.db.consultations.find_one({"_id": oid})
     return (d, 200) if d else ({"error": "introuvable"}, 404)

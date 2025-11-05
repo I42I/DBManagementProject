@@ -21,28 +21,12 @@ from bson.errors import InvalidId
 from pymongo.errors import WriteError
 from pymongo import ReturnDocument
 from datetime import datetime, timezone
+from utils import strip_none, iso_to_dt, validate_objectid
 
 bp = Blueprint("patients", __name__)
 
 _ALLOWED_SEX = {"M", "F", "X"}
 
-# -------------------------------
-# Helpers génériques
-# -------------------------------
-def _strip_none(d: dict):
-    """Supprime les paires clé=None (propre avant insertion Mongo)."""
-    return {k: v for k, v in d.items() if v is not None}
-
-def _iso_to_dt(s: str):
-    """Parse une date ISO 8601 en datetime *timezone-aware* (UTC)."""
-    try:
-        s = s.replace("Z", "+00:00") if isinstance(s, str) and s.endswith("Z") else s
-        dt = datetime.fromisoformat(s) if isinstance(s, str) else s
-        if not isinstance(dt, datetime):
-            return None
-        return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
-    except Exception:
-        return None
 
 # -------------------------------
 # Séquence : CHADH-PT-00001, etc.
@@ -61,8 +45,8 @@ def _next_seq(db, name: str) -> int:
     return int(doc["seq"])
 
 def _gen_patient_ident(db) -> str:
-    n = _next_seq(db, "patient_ident")
-    return f"CHADH-PT-{n:05d}"
+    return f"CHADH-PT-{_next_seq(db, 'patient_ident'):05d}"
+
 
 # -------------------------------
 # Validation métier
@@ -90,7 +74,7 @@ def _validate_patient(b: dict):
 
     # date
     if isinstance(ident.get("date_naissance"), str):
-        if not _iso_to_dt(ident["date_naissance"]):
+        if not iso_to_dt(ident["date_naissance"]):
             return "identite.date_naissance doit être ISO 8601"
 
     return None
@@ -132,45 +116,36 @@ def get_one(id):
 def create():
     b = request.get_json(force=True) or {}
 
-    #  Validation fonctionnelle
-    err = _validate_patient(b)
-    if err:
-        return {"error": err}, 400
-
-    #  facility_id requis par le $jsonSchema → cast ou génération mock
-    if b.get("facility_id"):
-        try:
-            b["facility_id"] = ObjectId(b["facility_id"])
-        except InvalidId:
-            return {"error": "facility_id doit être un ObjectId"}, 400
-    else:
-        b["facility_id"] = ObjectId()
-
-    #  Normalisation identité
-    ident = b["identite"]
-    ident["prenom"] = str(ident["prenom"]).strip().capitalize()
-    ident["nom"]    = str(ident["nom"]).strip().upper()
-    ident["sexe"]   = str(ident["sexe"]).upper()[:1]
-    # Date de naissance -> datetime timezone-aware
-    if isinstance(ident.get("date_naissance"), str):
-        dt = _iso_to_dt(ident["date_naissance"])
-        if not dt:
-            return {"error": "identite.date_naissance doit être ISO 8601"}, 400
-        ident["date_naissance"] = dt
-    b["identite"] = ident
-
-    #  Timestamps
-    now = datetime.utcnow().replace(tzinfo=timezone.utc)
-    b.setdefault("created_at", now)
-    b.setdefault("updated_at", now)
-    b.setdefault("deleted", False)
-
     #  Identifiant lisible auto si absent
     if not b.get("identifiant"):
         b["identifiant"] = _gen_patient_ident(current_app.db)
 
-    #  Nettoyage None (ex: contacts.absent)
-    doc = _strip_none(b)
+    #  Conversion des dates ISO en datetime
+    if b.get("identite", {}).get("date_naissance"):
+        b["identite"]["date_naissance"] = iso_to_dt(b["identite"]["date_naissance"])
+
+    #  Préparation du document final
+    doc = {
+        "identifiant": b.get("identifiant"),
+        "email": b.get("email"),
+        "identite": b.get("identite"),
+        "notes": b.get("notes"),
+        "allergies": b.get("allergies"),
+        "chronic_diseases": b.get("chronic_diseases"),
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
+        "deleted": False,
+    }
+
+    try:
+        doc["facility_id"] = validate_objectid(b.get("facility_id"))
+    except (ValueError, TypeError):
+        return {"error": "facility_id invalide ou manquant"}, 400
+
+    #  Nettoyage des valeurs nulles
+    doc = strip_none(doc)
+    if "identite" in doc:
+        doc["identite"] = strip_none(doc["identite"])
 
     #  Insertion Mongo
     try:

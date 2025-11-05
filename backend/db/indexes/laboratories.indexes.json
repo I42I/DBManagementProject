@@ -1,7 +1,36 @@
 [
-  { "key": { "patient_id": 1, "date_ordered": -1 }, "name": "by_patient_date_desc" },
-  { "key": { "doctor_id": 1,  "date_ordered": -1 }, "name": "by_doctor_date_desc" },
-  { "key": { "facility_id": 1, "status": 1 }, "name": "by_facility_status" },
-  { "key": { "tests.code": 1 }, "name": "by_test_code" },
-  { "key": { "status": 1, "date_reported": -1 }, "name": "by_status_reported" }
+  {
+    "key": {
+      "patient_id": 1,
+      "date_ordered": -1
+    },
+    "name": "by_patient_date_desc"
+  },
+  {
+    "key": {
+      "doctor_id": 1,
+      "date_ordered": -1
+    },
+    "name": "by_doctor_date_desc"
+  },
+  {
+    "key": {
+      "facility_id": 1,
+      "status": 1
+    },
+    "name": "by_facility_status"
+  },
+  {
+    "key": {
+      "tests.code": 1
+    },
+    "name": "by_test_code"
+  },
+  {
+    "key": {
+      "status": 1,
+      "date_reported": -1
+    },
+    "name": "by_status_reported"
+  }
 ]

@@ -158,7 +158,7 @@ def create():
 
     # insertion en base
     try:
-        ins = db.lab_results.insert_one(doc)
+        ins = db.laboratories.insert_one(doc)
     except WriteError as we:
         details = getattr(we, "details", {}) or {}
         return {"error": "validation_mongo", "details": details}, 400
@@ -216,7 +216,7 @@ def list_():
             rng["$lte"] = dt_
         q["date_ordered"] = rng
 
-    cur = current_app.db.lab_results.find(q).sort("date_ordered", -1).limit(200)
+    cur = current_app.db.laboratories.find(q).sort("date_ordered", -1).limit(200)
     return [d for d in cur], 200
 
 
@@ -229,6 +229,6 @@ def get_one(id):
         oid = ObjectId(id)
     except InvalidId:
         return {"error": "id invalide"}, 400
-    d = current_app.db.lab_results.find_one({"_id": oid})
+    d = current_app.db.laboratories.find_one({"_id": oid})
     return (d, 200) if d else ({"error": "introuvable"}, 404)
 

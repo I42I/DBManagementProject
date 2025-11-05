@@ -19,6 +19,8 @@ from bson import ObjectId
 from bson.errors import InvalidId
 from pymongo.errors import WriteError
 from datetime import datetime, timezone
+from utils import strip_none, iso_to_dt, validate_objectid, check_exists
+
 
 bp = Blueprint("pharmacies", __name__)
 
@@ -27,21 +29,6 @@ _ALLOWED_STATUS = {"requested", "prepared", "dispensed", "cancelled"}
 # -------------------------------
 # Helpers
 # -------------------------------
-def _iso_to_dt(s: str):
-    """Convertit 'YYYY-MM-DDTHH:mm:ss[.fff]Z' en datetime aware (UTC)."""
-    try:
-        s = s.replace("Z", "+00:00") if isinstance(s, str) and s.endswith("Z") else s
-        dt = datetime.fromisoformat(s) if isinstance(s, str) else s
-        if not isinstance(dt, datetime):
-            return None
-        return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
-    except Exception:
-        return None
-
-def _strip_none(d: dict):
-    """Supprime les clés dont la valeur est None (propre pour validators Mongo)."""
-    return {k: v for k, v in d.items() if v is not None}
-
 def _validate_create(b: dict):
     """
     Contrôles fonctionnels d’entrée.
@@ -158,14 +145,14 @@ def create():
     # 6) Date optionnelle : dispensed_at (ISO)
     dispensed_at = None
     if b.get("dispensed_at"):
-        dispensed_at = _iso_to_dt(b["dispensed_at"])
+        dispensed_at = iso_to_dt(b["dispensed_at"])
         if not dispensed_at:
             return {"error": "dispensed_at doit être ISO 8601"}, 400
 
     now = datetime.utcnow().replace(tzinfo=timezone.utc)
 
     # 7) Document Mongo — on nettoie les None
-    doc = _strip_none({
+    doc = strip_none({
         "patient_id":  pid,
         "doctor_id":   did,
         "facility_id": facility_id,

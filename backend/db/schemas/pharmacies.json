@@ -1,33 +1,76 @@
 {
   "bsonType": "object",
-  "required": ["patient_id", "doctor_id", "facility_id", "status", "created_at"],
+  "required": [
+    "patient_id",
+    "doctor_id",
+    "facility_id",
+    "status",
+    "created_at"
+  ],
   "properties": {
-    "patient_id":  { "bsonType": "objectId" },
-    "doctor_id":   { "bsonType": "objectId" },
-    "prescription_id": { "bsonType": "objectId" },
-    "facility_id": { "bsonType": "objectId" },
-
-    "status": { "enum": ["requested", "prepared", "dispensed", "cancelled"] },
-    "dispensed_at": { "bsonType": "date" },
-
+    "patient_id": {
+      "bsonType": "objectId"
+    },
+    "doctor_id": {
+      "bsonType": "objectId"
+    },
+    "prescription_id": {
+      "bsonType": "objectId"
+    },
+    "facility_id": {
+      "bsonType": "objectId"
+    },
+    "status": {
+      "enum": [
+        "requested",
+        "prepared",
+        "dispensed",
+        "cancelled"
+      ]
+    },
+    "dispensed_at": {
+      "bsonType": "date"
+    },
     "items": {
       "bsonType": "array",
       "minItems": 1,
       "items": {
         "bsonType": "object",
-        "required": ["dci", "qty"],
+        "required": [
+          "dci",
+          "qty"
+        ],
         "properties": {
-          "dci": { "bsonType": "string" },
-          "brand": { "bsonType": "string" },
-          "forme": { "bsonType": "string" },
-          "qty": { "bsonType": ["int","double","decimal"] },
-          "notes": { "bsonType": "string" }
+          "dci": {
+            "bsonType": "string"
+          },
+          "brand": {
+            "bsonType": "string"
+          },
+          "forme": {
+            "bsonType": "string"
+          },
+          "qty": {
+            "bsonType": [
+              "int",
+              "double",
+              "decimal"
+            ]
+          },
+          "notes": {
+            "bsonType": "string"
+          }
         }
       }
     },
-
-    "created_at": { "bsonType": "date" },
-    "updated_at": { "bsonType": "date" },
-    "deleted":    { "bsonType": "bool" }
+    "created_at": {
+      "bsonType": "date"
+    },
+    "updated_at": {
+      "bsonType": "date"
+    },
+    "deleted": {
+      "bsonType": "bool"
+    }
   }
 }

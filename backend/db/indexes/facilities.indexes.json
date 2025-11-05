@@ -1,0 +1,28 @@
+[
+  {
+    "key": {
+      "code": 1
+    },
+    "name": "uniq_code",
+    "unique": true
+  },
+  {
+    "key": {
+      "name": 1
+    },
+    "name": "by_name"
+  },
+  {
+    "key": {
+      "address.city": 1,
+      "name": 1
+    },
+    "name": "by_city_name"
+  },
+  {
+    "key": {
+      "type": 1
+    },
+    "name": "by_type"
+  }
+]

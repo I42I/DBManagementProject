@@ -19,6 +19,8 @@ from bson import ObjectId
 from bson.errors import InvalidId
 from pymongo.errors import WriteError
 from datetime import datetime, timezone
+from utils import strip_none, iso_to_dt, validate_objectid, check_exists
+
 
 bp = Blueprint("health_authorities", __name__)  # url_prefix="/api/health_authorities" dans app.py
 
@@ -28,23 +30,6 @@ ALLOWED_STATUS = {"draft", "submitted", "accepted", "rejected"}
 # -------------------------------
 # Helpers
 # -------------------------------
-def _iso_to_dt(v, field_name: str):
-    """Convertit ISO8601 (avec ou sans Z) en datetime aware (UTC)."""
-    if isinstance(v, datetime):
-        return v if v.tzinfo else v.replace(tzinfo=timezone.utc)
-    if not isinstance(v, str):
-        raise ValueError(f"{field_name} doit être une date ISO 8601")
-    try:
-        s = v.replace("Z", "+00:00") if v.endswith("Z") else v
-        dt = datetime.fromisoformat(s)
-        return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
-    except Exception:
-        raise ValueError(f"{field_name} doit être une date ISO 8601")
-
-def _strip_none(d: dict):
-    """Supprime les clés dont la valeur est None (propre pour les validateurs Mongo)."""
-    return {k: v for k, v in d.items() if v is not None}
-
 def _jsonify(doc):
     """Cast ObjectId/datetime -> types JSON-safe + normalise datetime en UTC (suffixe Z)."""
     if not doc:
@@ -93,8 +78,8 @@ def create():
 
     # Dates de période (obligatoires)
     try:
-        period_start = _iso_to_dt(b["period_start"], "period_start")
-        period_end   = _iso_to_dt(b["period_end"], "period_end")
+        period_start = iso_to_dt(b["period_start"], "period_start")
+        period_end   = iso_to_dt(b["period_end"], "period_end")
     except ValueError as e:
         return jsonify(error=str(e)), 400
 
@@ -105,14 +90,14 @@ def create():
     submitted_at = None
     if b.get("submitted_at"):
         try:
-            submitted_at = _iso_to_dt(b["submitted_at"], "submitted_at")
+            submitted_at = iso_to_dt(b["submitted_at"], "submitted_at")
         except ValueError as e:
             return jsonify(error=str(e)), 400
 
     now = datetime.utcnow().replace(tzinfo=timezone.utc)
 
     # Document propre pour Mongo
-    doc = _strip_none({
+    doc = strip_none({
         "facility_id": facility_id,
         "report_type": b["report_type"],
         "period_start": period_start,

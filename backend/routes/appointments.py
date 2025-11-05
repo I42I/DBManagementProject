@@ -8,6 +8,7 @@
 
 from flask import Blueprint, request, current_app
 from datetime import datetime
+from bson import ObjectId
 from utils import strip_none, iso_to_dt, validate_objectid, check_exists
 
 bp = Blueprint("appointments", __name__)

@@ -62,7 +62,6 @@ desktop.ini
 *.pid
 *.seed
 docker-compose.override.yml
-docker-compose.dev.yml
 
 # --- PowerShell scripts / logs temporaires ---
 *.ps1~

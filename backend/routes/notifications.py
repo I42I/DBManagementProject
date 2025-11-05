@@ -20,6 +20,8 @@ from bson import ObjectId
 from bson.errors import InvalidId
 from pymongo.errors import WriteError
 from datetime import datetime, timezone
+from utils import strip_none, iso_to_dt, validate_objectid, check_exists
+
 
 bp = Blueprint("notifications", __name__)
 
@@ -31,19 +33,6 @@ _ALLOWED_REF     = {"appointment", "consultation", "prescription", "payment", "o
 # -------------------------------
 # Helpers conversion / cast / clean
 # -------------------------------
-def _iso_to_dt(v):
-    """Convertit une chaîne ISO8601 en datetime UTC (timezone-aware)."""
-    if isinstance(v, datetime):
-        return v if v.tzinfo else v.replace(tzinfo=timezone.utc)
-    if not isinstance(v, str):
-        return None
-    try:
-        v = v.replace("Z", "+00:00") if v.endswith("Z") else v
-        dt = datetime.fromisoformat(v)
-        return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
-    except Exception:
-        return None
-
 def _cast_oid(v):
     """Tente de caster en ObjectId. Retourne None si invalide."""
     if v is None or isinstance(v, ObjectId):
@@ -52,10 +41,6 @@ def _cast_oid(v):
         return ObjectId(v)
     except InvalidId:
         return None
-
-def _strip_none(d: dict):
-    """Supprime les clés dont la valeur est None (propre pour Mongo + validators)."""
-    return {k: v for k, v in d.items() if v is not None}
 
 # -------------------------------
 # Validation d’entrée
@@ -128,9 +113,9 @@ def create():
             return {"error": f"ref_id introuvable pour ref_type={b['ref_type']}"}, 404
 
     #  Dates optionnelles
-    send_at    = _iso_to_dt(b.get("send_at"))    if b.get("send_at")    else None
-    sent_at    = _iso_to_dt(b.get("sent_at"))    if b.get("sent_at")    else None
-    expires_at = _iso_to_dt(b.get("expires_at")) if b.get("expires_at") else None
+    send_at    = iso_to_dt(b.get("send_at"))    if b.get("send_at")    else None
+    sent_at    = iso_to_dt(b.get("sent_at"))    if b.get("sent_at")    else None
+    expires_at = iso_to_dt(b.get("expires_at")) if b.get("expires_at") else None
 
     if b.get("send_at") and not send_at:
         return {"error": "send_at doit être ISO 8601"}, 400
@@ -146,7 +131,7 @@ def create():
     now = datetime.utcnow().replace(tzinfo=timezone.utc)
 
     #  Construction du document Mongo (pense à l’index TTL sur expires_at)
-    doc = _strip_none({
+    doc = strip_none({
         "channel": b["channel"],              # sms|email|push
         "status":  b["status"],               # queued|sent|failed|read
         "template": b.get("template"),        # ex: "appt_reminder"

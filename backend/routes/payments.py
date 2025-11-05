@@ -16,6 +16,8 @@ from bson import ObjectId
 from bson.errors import InvalidId
 from pymongo.errors import WriteError
 from datetime import datetime, timezone
+from utils import strip_none, iso_to_dt, validate_objectid, check_exists
+
 
 bp = Blueprint("payments", __name__)
 
@@ -26,24 +28,6 @@ _ALLOWED_CURRENCY = {"XAF", "XOF", "EUR", "USD"}
 _ALLOWED_METHOD   = {"cash", "card", "mobile", "insurance"}
 _ALLOWED_STATUS   = {"pending", "paid", "failed", "refunded", "cancelled"}
 _ALLOWED_ITEM_REF = {"appointment", "consultation", "laboratory", "pharmacy", "other"}
-
-
-# -----------------------------------------------------------
-# Outils : conversions et nettoyage
-# -----------------------------------------------------------
-def _iso_to_dt(s: str):
-    """Convertit une chaîne ISO8601 en datetime UTC."""
-    try:
-        s = s.replace("Z", "+00:00") if s.endswith("Z") else s
-        dt = datetime.fromisoformat(s)
-        return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
-    except Exception:
-        return None
-
-
-def _strip_none(d: dict):
-    """Supprime les clés dont la valeur est None (évite null dans Mongo)."""
-    return {k: v for k, v in d.items() if v is not None}
 
 
 # -----------------------------------------------------------
@@ -119,11 +103,11 @@ def create():
         return {"error": "références optionnelles: ObjectId invalide"}, 400
 
     # dates optionnelles
-    due_date = _iso_to_dt(b["due_date"]) if isinstance(b.get("due_date"), str) else None
+    due_date = iso_to_dt(b["due_date"]) if isinstance(b.get("due_date"), str) else None
     if isinstance(b.get("due_date"), str) and not due_date:
         return {"error": "due_date doit être au format ISO 8601"}, 400
 
-    paid_at = _iso_to_dt(b["paid_at"]) if isinstance(b.get("paid_at"), str) else None
+    paid_at = iso_to_dt(b["paid_at"]) if isinstance(b.get("paid_at"), str) else None
     if isinstance(b.get("paid_at"), str) and not paid_at:
         return {"error": "paid_at doit être au format ISO 8601"}, 400
 
@@ -140,11 +124,11 @@ def create():
                 ni["ref_id"] = ObjectId(it["ref_id"]) if isinstance(it["ref_id"], str) else it["ref_id"]
             except InvalidId:
                 return {"error": "items.ref_id doit être un ObjectId"}, 400
-        items.append(_strip_none(ni))
+        items.append(strip_none(ni))
 
     #  construction du document Mongo
     now = datetime.utcnow().replace(tzinfo=timezone.utc)
-    doc = _strip_none({
+    doc = strip_none({
         "patient_id": pid,
         "appointment_id": appt_id,
         "consultation_id": consult_id,
