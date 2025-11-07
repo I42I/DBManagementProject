@@ -16,5 +16,6 @@ export default defineConfig({
         rewrite: (p) => p.replace(/^\/api/, '/api'),
       },
     },
+    allowedHosts: ['chadhealth.msrl.be'],
   },
 })

@@ -5,11 +5,13 @@ services:
     ports: ["27017:27017"]
     volumes: ["mongo-data:/data/db"]
     restart: unless-stopped
+    networks:
+      - chadnet
 
   mongo-express:
     image: mongo-express:1
     container_name: mongo-express
-    ports: ["8081:8081"]
+    ports: ["28081:8081"]
     environment:
       - ME_CONFIG_MONGODB_URL=mongodb://mongo:27017
       # - ME_CONFIG_BASICAUTH=false # désactive l'auth (pas recommandé en prod)
@@ -18,6 +20,8 @@ services:
     depends_on:
       - mongo
     restart: unless-stopped
+    networks:
+      - chadnet
 
   backend:
     build: .
@@ -30,6 +34,12 @@ services:
     depends_on:
       - mongo
     restart: unless-stopped
+    networks:
+      - chadnet
 
 volumes:
   mongo-data:
+
+networks:
+  chadnet:
+    driver: bridge

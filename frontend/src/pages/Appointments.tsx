@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { appointments, toISOZ, type Appointment } from '../lib/api/appointments'
-import CreateAppointmentModal from '../components/CreateAppointmentModal' // ⬅️ ajout
+import CreateAppointmentModal from '../components/CreateAppointmentModal'
 
 type Row = Appointment & {
   patient_identifier?: string

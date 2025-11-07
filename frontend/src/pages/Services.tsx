@@ -18,7 +18,7 @@ export default function Services() {
     {
       title: 'Prescriptions',
       text: 'Visualisez vos ordonnances et traitements récents.',
-      link: '/services', // à remplacer plus tard par /prescriptions
+      link: '/prescriptions',
       icon: '/images/icon-prescription.svg',
     },
     {
@@ -29,15 +29,21 @@ export default function Services() {
     },
     {
       title: 'Pharmacies',
-      text: 'Trouvez les pharmacies partenaires et suivez vos délivrances.',
-      link: '/services', // à remplacer plus tard par /pharmacies
+      text: 'Suivez la délivrance de vos traitements en pharmacie.',
+      link: '/pharmacies',
       icon: '/images/icon-pharmacy.svg',
     },
     {
       title: 'Notifications',
       text: 'Recevez vos alertes médicales et rappels automatiques.',
-      link: '/services', // futur module notifications
+      link: '/notifications',
       icon: '/images/icon-notification.svg',
+    },
+    {
+      title: 'Rapports santé publique',
+      text: 'Suivez les rapports transmis aux autorités sanitaires.',
+      link: '/health-reports',
+      icon: '/images/icon-report.svg',
     },
   ]
 

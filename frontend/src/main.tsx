@@ -13,7 +13,11 @@ import Contact from './pages/Contact'
 import Results from './pages/Results'
 import Appointments from './pages/Appointments'
 import Prescriptions from './pages/Prescriptions'
-import PrescriptionDetail from './pages/PrescriptionDetail'   // ✅ import ajouté
+import PrescriptionDetail from './pages/PrescriptionDetail'
+import NotificationsPage from './pages/Notifications'
+import PaymentsPage from './pages/Payments'
+import PharmaciesPage from './pages/Pharmacies'
+import HealthReportsPage from './pages/HealthReports'
 
 import './index.css'
 
@@ -51,7 +55,7 @@ const router = createBrowserRouter(
 
         // Professionnels (FR) + alias EN
         { path: 'professionnels', element: <Professionals /> },
-        { path: 'professionals',  element: <Professionals /> },
+        { path: 'professionals', element: <Professionals /> },
 
         // Rendez-vous
         { path: 'appointments', element: <Appointments /> },
@@ -62,9 +66,13 @@ const router = createBrowserRouter(
         { path: 'results', element: <Results /> },
         { path: 'prescriptions', element: <Prescriptions /> },
         { path: 'prescriptions/:id', element: <PrescriptionDetail /> },  // ✅ ajout de la route dynamique
+        { path: 'pharmacies', element: <PharmaciesPage /> },
+        { path: 'health-reports', element: <HealthReportsPage /> },
         { path: 'news', element: <News /> },
         { path: 'about', element: <About /> },
         { path: 'contact', element: <Contact /> },
+        { path: 'payments', element: <PaymentsPage /> },
+        { path: 'notifications', element: <NotificationsPage /> },
 
         // 404 locale (pour toute sous-route inconnue sous '/')
         { path: '*', element: <NotFound /> },

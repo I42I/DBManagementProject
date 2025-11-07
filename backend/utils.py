@@ -8,18 +8,34 @@ def strip_none(d: dict) -> dict:
     """Supprime les clés dont la valeur est None."""
     return {k: v for k, v in d.items() if v is not None}
 
-def iso_to_dt(s: str | datetime | None) -> datetime | None:
-    """Convertit une date ISO 8601 en datetime UTC."""
-    if isinstance(s, datetime):
-        return s if s.tzinfo else s.replace(tzinfo=timezone.utc)
-    if not isinstance(s, str):
+def iso_to_dt(val, field_name: str | None = None):
+    """
+    Convertit une chaîne ISO (ou datetime) en datetime aware UTC.
+    - val: str | datetime | None
+    - field_name: nom du champ (optionnel) utilisé dans le message d'erreur
+
+    Retourne datetime ou None si val est falsy.
+    Lève ValueError si la conversion échoue.
+    """
+    if val is None or val == "":
         return None
+
+    if isinstance(val, datetime):
+        return val if val.tzinfo else val.replace(tzinfo=timezone.utc)
+
+    if not isinstance(val, str):
+        raise ValueError(f"{field_name or 'date'} invalide")
+
+    s = val.strip()
+    # support 'Z' suffix
+    if s.endswith("Z"):
+        s = s[:-1] + "+00:00"
     try:
-        s = s.replace("Z", "+00:00") if s.endswith("Z") else s
         dt = datetime.fromisoformat(s)
+        # assure timezone
         return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
-    except (ValueError, TypeError):
-        return None
+    except Exception:
+        raise ValueError(f"{field_name or 'date'} invalide")
 
 def validate_objectid(id_str: str, field_name: str = "ID"):
     """Valide un ObjectId, lève une exception 400 si invalide."""

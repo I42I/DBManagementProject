@@ -81,7 +81,19 @@ def list_():
         if date_from: q["date_time"]["$gte"] = date_from
         if date_to: q["date_time"]["$lte"] = date_to
 
-    cur = current_app.db.consultations.find(q).sort("date_time", -1).limit(200)
+    pipeline = [
+        {"$match": q},
+        {"$sort": {"date_time": -1}},
+        {"$limit": 200},
+        {"$lookup": {"from": "patients", "localField": "patient_id", "foreignField": "_id", "as": "p"}},
+        {"$lookup": {"from": "doctors", "localField": "doctor_id", "foreignField": "_id", "as": "d"}},
+        {"$addFields": {
+            "patient_name": {"$concat": [{"$arrayElemAt": ["$p.identite.prenom", 0]}, " ", {"$arrayElemAt": ["$p.identite.nom", 0]}]},
+            "doctor_name": {"$concat": [{"$arrayElemAt": ["$d.identite.prenom", 0]}, " ", {"$arrayElemAt": ["$d.identite.nom", 0]}]},
+        }},
+        {"$project": {"p": 0, "d": 0}}
+    ]
+    cur = current_app.db.consultations.aggregate(pipeline)
     return list(cur)
 
 # -----------------------------------------------------------

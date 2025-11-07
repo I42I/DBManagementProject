@@ -5,7 +5,7 @@ import { Languages, Sun, Moon, Accessibility } from 'lucide-react'
 export default function RootLayout() {
   const [dark, setDark] = useState(false)
   const [largeText, setLargeText] = useState(false)
-  const [lang, setLang] = useState<'fr'|'en'|'ar'>('fr')
+  const [lang, setLang] = useState<'fr' | 'en' | 'ar'>('fr')
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark)
@@ -16,23 +16,25 @@ export default function RootLayout() {
     <div className={dark ? 'dark bg-slate-900 text-slate-100' : ''}>
       <header className="border-b bg-white/70 backdrop-blur dark:bg-slate-900/60 sticky top-0 z-50">
         <div className="container py-3 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-3">
+          <Link to="/" className="flex items-center gap-3 pr-6">
             <img src="/images/logo.svg" alt="Logo CHAD Health" className="h-9" />
             <span className="font-bold text-lg">CHAD Health</span>
           </Link>
-          <nav className="hidden md:flex items-center gap-6">
-            <NavLink to="/" end className={({isActive}) => isActive ? 'text-primary font-semibold' : 'hover:text-primary'}>Accueil</NavLink>
-            <NavLink to="/services" className={({isActive}) => isActive ? 'text-primary font-semibold' : 'hover:text-primary'}>Services</NavLink>
-            <NavLink to="/patients" className={({isActive}) => isActive ? 'text-primary font-semibold' : 'hover:text-primary'}>Patients</NavLink>
-            <NavLink to="/professionals" className={({isActive}) => isActive ? 'text-primary font-semibold' : 'hover:text-primary'}>Professionnels</NavLink>
-            <NavLink to="/news" className={({isActive}) => isActive ? 'text-primary font-semibold' : 'hover:text-primary'}>Actualités</NavLink>
-            <NavLink to="/about" className={({isActive}) => isActive ? 'text-primary font-semibold' : 'hover:text-primary'}>À propos</NavLink>
-            <NavLink to="/contact" className={({isActive}) => isActive ? 'text-primary font-semibold' : 'hover:text-primary'}>Contact</NavLink>
+          <nav className="hidden md:flex items-center gap-4 lg:gap-6 text-sm lg:text-base mx-6 px-4">
+            <NavLink to="/" end className={({ isActive }) => isActive ? 'whitespace-nowrap text-primary font-semibold' : 'whitespace-nowrap hover:text-primary'}>Accueil</NavLink>
+            <NavLink to="/services" className={({ isActive }) => isActive ? 'whitespace-nowrap text-primary font-semibold' : 'whitespace-nowrap hover:text-primary'}>Services</NavLink>
+            <NavLink to="/patients" className={({ isActive }) => isActive ? 'whitespace-nowrap text-primary font-semibold' : 'whitespace-nowrap hover:text-primary'}>Patients</NavLink>
+            <NavLink to="/professionals" className={({ isActive }) => isActive ? 'whitespace-nowrap text-primary font-semibold' : 'whitespace-nowrap hover:text-primary'}>Professionnels</NavLink>
+            <NavLink to="/payments" className={({ isActive }) => isActive ? 'whitespace-nowrap text-primary font-semibold' : 'whitespace-nowrap hover:text-primary'}>Paiements</NavLink>
+            <NavLink to="/notifications" className={({ isActive }) => isActive ? 'whitespace-nowrap text-primary font-semibold' : 'whitespace-nowrap hover:text-primary'}>Notifications</NavLink>
+            <NavLink to="/news" className={({ isActive }) => isActive ? 'whitespace-nowrap text-primary font-semibold' : 'whitespace-nowrap hover:text-primary'}>Actualités</NavLink>
+            <NavLink to="/about" className={({ isActive }) => isActive ? 'whitespace-nowrap text-primary font-semibold' : 'whitespace-nowrap hover:text-primary'}>À propos</NavLink>
+            <NavLink to="/contact" className={({ isActive }) => isActive ? 'whitespace-nowrap text-primary font-semibold' : 'whitespace-nowrap hover:text-primary'}>Contact</NavLink>
           </nav>
-          <div className="flex items-center gap-2">
-            <button aria-label="Contraste / mode sombre" className="btn btn-outline" onClick={() => setDark(v=>!v)}>{dark ? <Sun size={18}/> : <Moon size={18}/>}<span className="hidden md:inline">Contraste</span></button>
-            <button aria-label="Accessibilité: texte large" className="btn btn-outline" onClick={() => setLargeText(v=>!v)}><Accessibility size={18}/><span className="hidden md:inline">Texte</span></button>
-            <button className="btn btn-outline"><Languages size={18}/><span className="hidden md:inline">Langue: {lang.toUpperCase()}</span></button>
+          <div className="flex items-center gap-3 pl-6">
+            <button aria-label="Contraste / mode sombre" className="btn btn-outline" onClick={() => setDark(v => !v)}>{dark ? <Sun size={18} /> : <Moon size={18} />}<span className="hidden md:inline">Contraste</span></button>
+            <button aria-label="Accessibilité: texte large" className="btn btn-outline" onClick={() => setLargeText(v => !v)}><Accessibility size={18} /><span className="hidden md:inline">Texte</span></button>
+            <button className="btn btn-outline"><Languages size={18} /><span className="hidden md:inline">Langue: {lang.toUpperCase()}</span></button>
           </div>
         </div>
       </header>
