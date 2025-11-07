@@ -24,7 +24,7 @@ To run in development mode:
 ```bash
 docker-compose -f docker-compose.dev.yml up --build -d
 ```
-- The frontend (Vite) will be on `http://localhost:5173`.
+- The frontend (Vite) will be on `http://localhost:25173`.
 - The backend (Flask) will be on `http://localhost:5000`.
 - Mongo Express will be on `http://localhost:8081`.
 
