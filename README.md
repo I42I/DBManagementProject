@@ -2,6 +2,11 @@
 
 ---
 
+## Web App — Accès & vérification
+
+- URL de test : https://chadhealth.msrl.be  
+- Interface d'administration Mongo : https://mongo-chadhealth.msrl.be (mongo‑express)
+
 ## Docker Commands
 
 This project is fully containerized for both production and development environments.
